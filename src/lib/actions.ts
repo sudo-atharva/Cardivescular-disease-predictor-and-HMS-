@@ -2,16 +2,22 @@
 'use server';
 
 import { generateDiagnosisReport, type GenerateDiagnosisReportInput } from '@/ai/flows/generate-diagnosis-report';
-import { reports } from './data';
+import clientPromise from './mongodb';
+import type { Report } from './models';
 
-function getPatientHistoryAsString(patientId: string): string {
-    const report = reports.find(r => r.patientInfo.patientId === patientId);
+async function getPatientHistoryAsString(patientId: string): Promise<string> {
+    const client = await clientPromise;
+    const db = client.db();
+    const reportsCollection = db.collection<Report>('reports');
+
+    const report = await reportsCollection.findOne({ patientId: patientId }, { sort: { createdAt: -1 } });
+
     if (!report) {
         return "No patient history found.";
     }
 
     const historyParts = [
-        `Patient ID: ${report.patientInfo.patientId}`,
+        `Patient ID: ${report.patientId}`,
         `Full Name: ${report.patientInfo.fullName}`,
         `Age: ${report.patientInfo.age}`,
         `Gender: ${report.patientInfo.gender}`,
@@ -29,7 +35,7 @@ function getPatientHistoryAsString(patientId: string): string {
         `Treatment Plan: ${report.treatmentPlan.plan}`
     ];
 
-    return historyParts.filter(part => part.split(':')[1].trim()).join('\n');
+    return historyParts.filter(part => part.split(':')[1]?.trim()).join('\n');
 }
 
 
@@ -48,7 +54,7 @@ export async function createDiagnosisReport(
     {"ts":"2024-08-19T14:22:39","id":"CAR01","ppg":1030,"ecg":0.86,"hr":72,"spo2":98,"ptt":180}
   ];
 
-  const patientHistory = getPatientHistoryAsString(patientId);
+  const patientHistory = await getPatientHistoryAsString(patientId);
 
   const input: GenerateDiagnosisReportInput = {
     vitalsData: JSON.stringify(mockVitalsData),
@@ -65,10 +71,18 @@ export async function createDiagnosisReport(
   try {
     const output = await generateDiagnosisReport(input);
 
-    // Find the report and update the mlDiagnosis field
-    const reportIndex = reports.findIndex(r => r.patientInfo.patientId === patientId);
-    if (reportIndex !== -1) {
-        reports[reportIndex].mlDiagnosis = output.diagnosisReport;
+    const client = await clientPromise;
+    const db = client.db();
+    const reportsCollection = db.collection<Report>('reports');
+    
+    // Find the latest report and update the mlDiagnosis field
+    const latestReport = await reportsCollection.findOne({ patientId: patientId }, { sort: { createdAt: -1 } });
+
+    if (latestReport) {
+        await reportsCollection.updateOne(
+            { _id: latestReport._id },
+            { $set: { mlDiagnosis: output.diagnosisReport } }
+        );
     }
 
     return {
