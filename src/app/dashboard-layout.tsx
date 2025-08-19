@@ -80,15 +80,16 @@ export default function DashboardLayout({ children, userType }: DashboardLayoutP
           <SidebarMenu>
             {navigationMenu.map((item) => (
               <SidebarMenuItem key={item.name}>
-                <Link href={item.href} legacyBehavior passHref>
-                  <SidebarMenuButton
-                    isActive={pathname === item.href}
-                    tooltip={{ children: item.name }}
-                  >
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === item.href}
+                  tooltip={{ children: item.name }}
+                >
+                  <Link href={item.href}>
                     <item.icon />
                     <span>{item.name}</span>
-                  </SidebarMenuButton>
-                </Link>
+                  </Link>
+                </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
@@ -97,15 +98,16 @@ export default function DashboardLayout({ children, userType }: DashboardLayoutP
           <SidebarMenu>
             {commonNav.map((item) => (
                <SidebarMenuItem key={item.name}>
-                 <Link href={item.href} legacyBehavior passHref>
-                  <SidebarMenuButton
-                    isActive={pathname === item.href}
-                    tooltip={{ children: item.name }}
-                  >
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === item.href}
+                  tooltip={{ children: item.name }}
+                >
+                   <Link href={item.href}>
                     <item.icon />
                     <span>{item.name}</span>
-                  </SidebarMenuButton>
-                 </Link>
+                  </Link>
+                </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
              <SidebarMenuItem>
