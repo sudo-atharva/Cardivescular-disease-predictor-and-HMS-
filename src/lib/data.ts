@@ -17,6 +17,11 @@ export const patients: Patient[] = [
   { id: 'pat_004', name: 'Emily White', status: 'Monitoring', lastCheck: '45 mins ago', risk: 'Medium', deviceId: 'DEV_D', isLive: true, password: 'password123' },
 ];
 
+export function addPatient(patient: Patient) {
+    patients.unshift(patient);
+}
+
+
 export type Report = {
   id: string;
   patientInfo: {
@@ -58,14 +63,13 @@ export type Report = {
 export let reports: Report[] = [];
 
 export function addReport(report: Report) {
-  // Check if it's a new report for an existing patient or a brand new patient
-  const existingReportIndex = reports.findIndex(r => r.patientInfo.patientId === report.patientInfo.patientId);
   const patientExists = patients.some(p => p.id === report.patientInfo.patientId);
 
-  reports.unshift(report); // Add new report to the beginning of the list
+  // Add new report to the beginning of the list
+  reports.unshift(report);
 
   if (!patientExists) {
-    patients.unshift({
+    addPatient({
         id: report.patientInfo.patientId,
         name: report.patientInfo.fullName,
         status: 'Monitoring',

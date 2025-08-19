@@ -6,14 +6,15 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Link as LinkIcon, Save } from 'lucide-react';
+import { PlusCircle, Eye, Save } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { patients, reports, addReport } from '@/lib/data';
+import { patients, reports, addReport, addPatient } from '@/lib/data';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -26,11 +27,14 @@ export default function PatientsPage() {
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
+    const patientId = formData.get('patientId') as string;
+    const fullName = formData.get('fullName') as string;
+    
     const newReport = {
       id: `rep_${Date.now()}`,
       patientInfo: {
-        fullName: formData.get('fullName') as string,
-        patientId: formData.get('patientId') as string,
+        fullName: fullName,
+        patientId: patientId,
         age: formData.get('age') as string,
         gender: formData.get('gender') as string,
         visitDate: formData.get('visitDate') as string,
@@ -64,6 +68,7 @@ export default function PatientsPage() {
       mlDiagnosis: "Awaiting ML model analysis. Generate from the patient's detail page.",
     };
     
+    // Add the report which also creates the patient if they don't exist
     addReport(newReport);
     
     toast({
@@ -72,7 +77,7 @@ export default function PatientsPage() {
     });
     
     setIsDialogOpen(false);
-    // This is a way to trigger a re-render to show the new report in lists
+    // This is a way to trigger a re-render to show the new patient/report in lists
     router.refresh(); 
   };
 
@@ -272,10 +277,12 @@ export default function PatientsPage() {
                   </TableCell>
                   <TableCell>{patient.lastCheck}</TableCell>
                   <TableCell>
-                    <Button variant="outline" size="sm">
-                      <LinkIcon className="mr-2 h-4 w-4" />
-                      Assign Device
-                    </Button>
+                     <Button asChild variant="outline" size="sm">
+                        <Link href={`/doctor/patients/${patient.id}`}>
+                           <Eye className="mr-2 h-4 w-4" />
+                           View Details
+                        </Link>
+                      </Button>
                   </TableCell>
                 </TableRow>
               ))}
