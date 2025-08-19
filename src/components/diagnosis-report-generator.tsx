@@ -8,9 +8,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { Bot, Loader2 } from 'lucide-react';
-import { Input } from './ui/input';
 
 const initialState = {
   message: '',
@@ -37,6 +36,12 @@ export default function DiagnosisReportGenerator() {
         variant: 'destructive',
         title: 'Error',
         description: state.message,
+      });
+    }
+     if (state.message === 'success' && state.report) {
+      toast({
+        title: 'Report Generated',
+        description: 'The AI diagnosis report has been successfully created.',
       });
     }
   }, [state, toast]);
