@@ -4,23 +4,27 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { reports } from '@/lib/data';
 
-export default function ReportsPage() {
+// In a real app, we'd filter reports for the logged-in user.
+// Here we'll show the first report as an example for "John Doe"
+const patientReports = reports.filter(r => r.patientInfo.fullName === 'John Doe' || reports.indexOf(r) === 0);
+
+export default function PatientReportsPage() {
   return (
     <div className="flex flex-col gap-6">
       <Card>
         <CardHeader>
-          <CardTitle>Patient Reports</CardTitle>
-          <CardDescription>View and manage all patient reports.</CardDescription>
+          <CardTitle>My Reports</CardTitle>
+          <CardDescription>Here are your available health reports.</CardDescription>
         </CardHeader>
         <CardContent>
-          {reports.length === 0 ? (
-            <p>No reports have been generated yet.</p>
+          {patientReports.length === 0 ? (
+            <p>You do not have any reports yet.</p>
           ) : (
             <Accordion type="multiple" className="w-full space-y-4">
-              {reports.map((report) => (
-                <AccordionItem value={`item-${report.id}`} key={report.id} className="border rounded-lg px-4">
+              {patientReports.map((report) => (
+                 <AccordionItem value={`item-${report.id}`} key={report.id} className="border rounded-lg px-4">
                   <AccordionTrigger className="text-lg font-semibold">
-                    Report for {report.patientInfo.fullName} (ID: {report.patientInfo.patientId}) - {report.patientInfo.visitDate}
+                    Report from {report.patientInfo.visitDate}
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="prose prose-sm max-w-none">
@@ -33,30 +37,14 @@ export default function ReportsPage() {
                       <h2>Medical Details</h2>
                       <p><strong>Presenting Complaint:</strong> {report.medicalHistory.complaint}</p>
                       <p><strong>History of Present Illness:</strong> {report.medicalHistory.hpi}</p>
-                      <p><strong>Past Medical History:</strong> {report.medicalHistory.pastMedicalHistory}</p>
-                       <p><strong>Medication History:</strong> {report.medicalHistory.medicationHistory}</p>
-                       <p><strong>Family History:</strong> {report.medicalHistory.familyHistory}</p>
-                       <p><strong>Personal/Social History:</strong> {report.medicalHistory.socialHistory}</p>
                       <hr />
-                       <h2>Clinical Examination</h2>
-                      <p><strong>General Examination:</strong> {report.clinicalExam.general}</p>
-                      <p><strong>Systemic Examination:</strong> {report.clinicalExam.systemic}</p>
-                      <hr />
-                       <h2>Investigations & Diagnosis</h2>
-                      <p><strong>Investigations Ordered:</strong> {report.investigations.ordered}</p>
+                       <h2>Diagnosis</h2>
                       <p><strong>Diagnosis:</strong> {report.investigations.diagnosis}</p>
                       <hr />
                        <h2>Treatment Plan</h2>
                       <p><strong>Plan & Prescription:</strong> {report.treatmentPlan.plan}</p>
                        <hr />
-                       <Card className="bg-primary/10 mt-4">
-                        <CardHeader>
-                          <CardTitle>ML-Based Diagnosis Report</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <p>{report.mlDiagnosis}</p>
-                        </CardContent>
-                       </Card>
+                       <p>For a detailed analysis and ML-based insights, please consult with your doctor.</p>
                     </div>
                   </AccordionContent>
                 </AccordionItem>

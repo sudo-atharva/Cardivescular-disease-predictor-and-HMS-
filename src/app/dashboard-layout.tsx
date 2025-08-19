@@ -51,7 +51,7 @@ const doctorNav = [
 
 const patientNav = [
   { name: 'Dashboard', href: '/patient/dashboard', icon: LayoutDashboard },
-  { name: 'My Reports', href: '#', icon: FileText },
+  { name: 'My Reports', href: '/patient/my-reports', icon: FileText },
   { name: 'Vitals History', href: '#', icon: Stethoscope },
 ];
 
