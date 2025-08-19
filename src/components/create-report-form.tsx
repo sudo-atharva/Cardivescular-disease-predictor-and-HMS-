@@ -9,7 +9,6 @@ import { Save } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 type CreateReportFormProps = {
@@ -20,6 +19,7 @@ type CreateReportFormProps = {
 
 export default function CreateReportForm({ patient, onFormSubmit, latestReport }: CreateReportFormProps) {
   const { toast } = useToast();
+  const formRef = React.useRef<HTMLFormElement>(null);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -72,9 +72,8 @@ export default function CreateReportForm({ patient, onFormSubmit, latestReport }
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <ScrollArea className="max-h-[70vh] p-4">
-        <Accordion type="multiple" defaultValue={['item-1', 'item-2']} className="w-full">
+    <form onSubmit={handleSubmit} ref={formRef} className="flex flex-col h-full">
+        <Accordion type="multiple" defaultValue={['item-1', 'item-2', 'item-3', 'item-4', 'item-5', 'item-6']} className="w-full pr-1">
           <AccordionItem value="item-1">
             <AccordionTrigger>Patient Information</AccordionTrigger>
             <AccordionContent className="space-y-4">
@@ -183,22 +182,21 @@ export default function CreateReportForm({ patient, onFormSubmit, latestReport }
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="doctorName">Name of doctor</Label>
-                  <Input id="doctorName" name="doctorName" />
+                  <Input id="doctorName" name="doctorName" defaultValue={latestReport?.doctorDetails.name} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="regNumber">Registration number</Label>
-                  <Input id="regNumber" name="regNumber" />
+                  <Input id="regNumber" name="regNumber" defaultValue={latestReport?.doctorDetails.regNumber} />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="signature">Signature & Date</Label>
-                <Input id="signature" name="signature" placeholder="Signature and today's date" />
+                <Input id="signature" name="signature" placeholder="Signature and today's date" defaultValue={latestReport?.doctorDetails.signature} />
               </div>
             </AccordionContent>
           </AccordionItem>
         </Accordion>
-      </ScrollArea>
-      <div className="flex justify-end pt-4 pr-4">
+      <div className="flex justify-end pt-4 mt-auto">
           <Button type="submit">
             <Save className="mr-2 h-4 w-4" />
             Save New Report

@@ -58,11 +58,13 @@ export default function PatientDetailPage() {
                   Create New Report
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-4xl">
+              <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col">
                  <DialogHeader>
                   <DialogTitle>Create New Report for {patient.name}</DialogTitle>
                 </DialogHeader>
-                <CreateReportForm patient={patient} onFormSubmit={handleDialogClose} latestReport={latestReport} />
+                <div className="flex-1 overflow-y-auto -mr-6 pr-6">
+                    <CreateReportForm patient={patient} onFormSubmit={handleDialogClose} latestReport={latestReport} />
+                </div>
               </DialogContent>
             </Dialog>
         </CardHeader>
