@@ -10,7 +10,6 @@ import {
   Settings,
   User,
   LogOut,
-  BarChart3,
   Stethoscope,
 } from 'lucide-react';
 import {
@@ -46,7 +45,6 @@ const doctorNav = [
   { name: 'Dashboard', href: '/doctor/dashboard', icon: LayoutDashboard },
   { name: 'Patients', href: '/doctor/patients', icon: Users },
   { name: 'Reports', href: '/doctor/reports', icon: FileText },
-  { name: 'Analytics', href: '/doctor/analytics', icon: BarChart3 },
 ];
 
 const patientNav = [
@@ -120,7 +118,7 @@ export default function DashboardLayout({ children, userType }: DashboardLayoutP
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-16 items-center justify-between border-b bg-background/50 backdrop-blur-sm px-6 sticky top-0 z-10">
+        <header className="flex h-16 items-center justify-between border-b bg-background/50 backdrop-blur-sm px-6 sticky top-0 z-10 print:hidden">
           <SidebarTrigger />
           <h2 className="text-lg font-semibold capitalize">{userType} Dashboard</h2>
           <DropdownMenu>

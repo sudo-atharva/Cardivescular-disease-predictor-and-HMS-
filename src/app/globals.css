@@ -86,3 +86,30 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+@media print {
+  body {
+    background: white;
+  }
+  .printable-content {
+    display: block;
+  }
+  .main-content > :not(.printable-content) {
+    display: none;
+  }
+  main > * {
+    display: none;
+  }
+  main > .flex.flex-col.gap-6 {
+    display: flex;
+  }
+  .p-6 {
+    padding: 0;
+  }
+  .border {
+    border: none;
+  }
+  .shadow-sm {
+    box-shadow: none;
+  }
+}
