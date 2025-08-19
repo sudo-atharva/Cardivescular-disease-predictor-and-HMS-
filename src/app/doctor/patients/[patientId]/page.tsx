@@ -28,7 +28,7 @@ export default function PatientDetailPage() {
 
   // Find the patient and their reports from the mock data
   const patient = useMemo(() => patients.find(p => p.id === patientId), [patientId]);
-  const patientReports = useMemo(() => reports.filter(r => r.patientInfo.patientId === patientId), [patientId]);
+  const patientReports = useMemo(() => reports.filter(r => r.patientInfo.patientId === patientId).sort((a, b) => new Date(b.patientInfo.visitDate).getTime() - new Date(a.patientInfo.visitDate).getTime()), [patientId]);
   const latestReport = useMemo(() => patientReports.length > 0 ? patientReports[0] : null, [patientReports]);
 
   if (!patient) {
@@ -62,7 +62,7 @@ export default function PatientDetailPage() {
                  <DialogHeader>
                   <DialogTitle>Create New Report for {patient.name}</DialogTitle>
                 </DialogHeader>
-                <CreateReportForm patient={patient} onFormSubmit={handleDialogClose} />
+                <CreateReportForm patient={patient} onFormSubmit={handleDialogClose} latestReport={latestReport} />
               </DialogContent>
             </Dialog>
         </CardHeader>

@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import { useToast } from '@/components/ui/use-toast';
-import { addReport, Patient } from '@/lib/data';
+import { addReport, Patient, Report } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Save } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -15,9 +15,10 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 type CreateReportFormProps = {
   patient: Patient;
   onFormSubmit: () => void;
+  latestReport: Report | null;
 };
 
-export default function CreateReportForm({ patient, onFormSubmit }: CreateReportFormProps) {
+export default function CreateReportForm({ patient, onFormSubmit, latestReport }: CreateReportFormProps) {
   const { toast } = useToast();
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -90,11 +91,11 @@ export default function CreateReportForm({ patient, onFormSubmit }: CreateReport
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="age">Age / Date of Birth</Label>
-                  <Input id="age" name="age" placeholder="35" required />
+                  <Input id="age" name="age" placeholder="35" defaultValue={latestReport?.patientInfo.age} required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="gender">Sex / Gender</Label>
-                  <Input id="gender" name="gender" placeholder="Male" required />
+                  <Input id="gender" name="gender" placeholder="Male" defaultValue={latestReport?.patientInfo.gender} required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="visitDate">Date of Visit</Label>
@@ -103,7 +104,7 @@ export default function CreateReportForm({ patient, onFormSubmit }: CreateReport
               </div>
               <div className="space-y-2">
                 <Label htmlFor="address">Address & Contact</Label>
-                <Textarea id="address" name="address" placeholder="123 Health St, Medcity..." required />
+                <Textarea id="address" name="address" placeholder="123 Health St, Medcity..." defaultValue={latestReport?.patientInfo.address} required />
               </div>
             </AccordionContent>
           </AccordionItem>
@@ -113,27 +114,27 @@ export default function CreateReportForm({ patient, onFormSubmit }: CreateReport
             <AccordionContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="complaint">Presenting Complaint (PC)</Label>
-                <Textarea id="complaint" name="complaint" placeholder="e.g., “Chest pain since 2 days”, “Fever with cough”" />
+                <Textarea id="complaint" name="complaint" placeholder="e.g., “Chest pain since 2 days”, “Fever with cough”" defaultValue={latestReport?.medicalHistory.complaint} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="hpi">History of Present Illness (HPI)</Label>
-                <Textarea id="hpi" name="hpi" placeholder="Details about how the problem started, duration, progression..." />
+                <Textarea id="hpi" name="hpi" placeholder="Details about how the problem started, duration, progression..." defaultValue={latestReport?.medicalHistory.hpi} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="pastMedicalHistory">Past Medical History</Label>
-                <Textarea id="pastMedicalHistory" name="pastMedicalHistory" placeholder="Previous illnesses (diabetes, hypertension, TB...)" />
+                <Textarea id="pastMedicalHistory" name="pastMedicalHistory" placeholder="Previous illnesses (diabetes, hypertension, TB...)" defaultValue={latestReport?.medicalHistory.pastMedicalHistory} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="medicationHistory">Medication History</Label>
-                <Textarea id="medicationHistory" name="medicationHistory" placeholder="All current medications being taken and known drug allergies" />
+                <Textarea id="medicationHistory" name="medicationHistory" placeholder="All current medications being taken and known drug allergies" defaultValue={latestReport?.medicalHistory.medicationHistory} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="familyHistory">Family History</Label>
-                <Textarea id="familyHistory" name="familyHistory" placeholder="Any hereditary illnesses in family (heart disease, cancers, etc.)" />
+                <Textarea id="familyHistory" name="familyHistory" placeholder="Any hereditary illnesses in family (heart disease, cancers, etc.)" defaultValue={latestReport?.medicalHistory.familyHistory} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="socialHistory">Personal / Social History</Label>
-                <Textarea id="socialHistory" name="socialHistory" placeholder="Smoking, alcohol, tobacco, occupation, lifestyle" />
+                <Textarea id="socialHistory" name="socialHistory" placeholder="Smoking, alcohol, tobacco, occupation, lifestyle" defaultValue={latestReport?.medicalHistory.socialHistory} />
               </div>
             </AccordionContent>
           </AccordionItem>
@@ -143,11 +144,11 @@ export default function CreateReportForm({ patient, onFormSubmit }: CreateReport
             <AccordionContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="generalExam">General Examination</Label>
-                <Textarea id="generalExam" name="generalExam" placeholder="Vitals: Pulse, Blood Pressure, Temperature, Respiratory Rate, SpO₂, General condition, pallor, icterus, cyanosis, edema" />
+                <Textarea id="generalExam" name="generalExam" placeholder="Vitals: Pulse, Blood Pressure, Temperature, Respiratory Rate, SpO₂, General condition, pallor, icterus, cyanosis, edema" defaultValue={latestReport?.clinicalExam.general} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="systemicExam">Systemic Examination</Label>
-                <Textarea id="systemicExam" name="systemicExam" placeholder="CVS (heart), RS (lungs), CNS (nervous system), Abdomen" />
+                <Textarea id="systemicExam" name="systemicExam" placeholder="CVS (heart), RS (lungs), CNS (nervous system), Abdomen" defaultValue={latestReport?.clinicalExam.systemic} />
               </div>
             </AccordionContent>
           </AccordionItem>
@@ -157,11 +158,11 @@ export default function CreateReportForm({ patient, onFormSubmit }: CreateReport
             <AccordionContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="investigations">Investigations Ordered / Lab Reports</Label>
-                <Textarea id="investigations" name="investigations" placeholder="Blood tests, Radiology (X-Ray, CT, MRI, ECG, USG), Special tests" />
+                <Textarea id="investigations" name="investigations" placeholder="Blood tests, Radiology (X-Ray, CT, MRI, ECG, USG), Special tests" defaultValue={latestReport?.investigations.ordered} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="diagnosis">Diagnosis</Label>
-                <Textarea id="diagnosis" name="diagnosis" placeholder="Provisional Diagnosis and Final Diagnosis" />
+                <Textarea id="diagnosis" name="diagnosis" placeholder="Provisional Diagnosis and Final Diagnosis" defaultValue={latestReport?.investigations.diagnosis} />
               </div>
             </AccordionContent>
           </AccordionItem>
@@ -171,7 +172,7 @@ export default function CreateReportForm({ patient, onFormSubmit }: CreateReport
             <AccordionContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="treatment">Treatment Plan / Prescription</Label>
-                <Textarea id="treatment" name="treatment" placeholder="Medications prescribed with dose & duration, Procedures done, Follow-up advice" />
+                <Textarea id="treatment" name="treatment" placeholder="Medications prescribed with dose & duration, Procedures done, Follow-up advice" defaultValue={latestReport?.treatmentPlan.plan} />
               </div>
             </AccordionContent>
           </AccordionItem>
