@@ -44,8 +44,8 @@ export default function PatientDetailPage() {
   return (
     <div className="flex flex-col gap-6">
        <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-            <div>
+        <CardHeader className="flex flex-row items-start justify-between">
+            <div className="flex-1">
               <CardTitle className="text-3xl">Patient: {patient.name}</CardTitle>
               <CardDescription>
                 ID: {patient.id} | Age: {latestReport?.patientInfo.age} | Gender: {latestReport?.patientInfo.gender} | Device ID: {patient.deviceId || 'N/A'}
