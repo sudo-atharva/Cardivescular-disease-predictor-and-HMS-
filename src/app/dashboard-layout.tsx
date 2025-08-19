@@ -50,7 +50,7 @@ const doctorNav = [
 const patientNav = [
   { name: 'Dashboard', href: '/patient/dashboard', icon: LayoutDashboard },
   { name: 'My Reports', href: '/patient/my-reports', icon: FileText },
-  { name: 'Vitals History', href: '#', icon: Stethoscope },
+  { name: 'Vitals History', href: '/patient/vitals-history', icon: Stethoscope },
 ];
 
 const commonNav = [{ name: 'Settings', href: '/settings', icon: Settings }];
