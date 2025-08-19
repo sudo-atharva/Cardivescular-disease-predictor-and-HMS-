@@ -8,8 +8,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { Bot, Loader2 } from 'lucide-react';
-import { Label } from './ui/label';
-import { Textarea } from './ui/textarea';
 
 const initialState = {
   message: '',
@@ -21,13 +19,14 @@ function SubmitButton() {
   return (
     <Button type="submit" className="w-full sm:w-auto" disabled={pending}>
       {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Bot className="mr-2 h-4 w-4" />}
-      Generate Prediction Report
+      Predict Diseases
     </Button>
   );
 }
 
-export default function DiagnosisReportGenerator() {
-  const [state, formAction] = useActionState(createDiagnosisReport, initialState);
+export default function DiagnosisReportGenerator({ patientId }: { patientId: string }) {
+  const createDiagnosisReportWithPatientId = createDiagnosisReport.bind(null, patientId);
+  const [state, formAction] = useActionState(createDiagnosisReportWithPatientId, initialState);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -40,8 +39,8 @@ export default function DiagnosisReportGenerator() {
     }
      if (state.message === 'success' && state.report) {
       toast({
-        title: 'Report Generated',
-        description: 'The AI diagnosis report has been successfully created.',
+        title: 'Prediction Complete',
+        description: 'The AI disease prediction has been successfully generated.',
       });
     }
   }, [state, toast]);
@@ -49,24 +48,12 @@ export default function DiagnosisReportGenerator() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>ML-Based Diagnosis Assistant</CardTitle>
+        <CardTitle>ML-Based Disease Prediction</CardTitle>
         <CardDescription>
-          Click the button to generate a preliminary diagnosis report using the patient's collected vital signs data. Please provide a brief summary of the patient's history below.
+          Click the button to generate a disease prediction report using the patient's collected vital signs and full medical history. The result will be saved to their record.
         </CardDescription>
       </CardHeader>
       <form action={formAction}>
-        <CardContent>
-          <div className="space-y-2">
-              <Label htmlFor="patientHistory">Patient History Summary</Label>
-              <Textarea
-                id="patientHistory"
-                name="patientHistory"
-                placeholder="Provide a brief summary of relevant patient medical history (e.g., existing conditions, chief complaint)..."
-                className="min-h-[100px]"
-                required
-              />
-            </div>
-        </CardContent>
         <CardFooter className="flex justify-end">
           <SubmitButton />
         </CardFooter>
@@ -75,7 +62,7 @@ export default function DiagnosisReportGenerator() {
         <CardContent>
             <Card className="bg-muted/50">
                 <CardHeader>
-                    <CardTitle>Generated Diagnosis Report</CardTitle>
+                    <CardTitle>Generated Prediction Report</CardTitle>
                 </CardHeader>
                 <CardContent className="prose prose-sm max-w-none text-foreground">
                    <p>{state.report}</p>

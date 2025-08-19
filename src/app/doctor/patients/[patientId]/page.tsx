@@ -8,43 +8,34 @@ import { Badge } from '@/components/ui/badge';
 import { Heart, Droplets, Thermometer, Activity } from 'lucide-react';
 import PatientVitalsChart from '@/components/patient-charts';
 import DiagnosisReportGenerator from '@/components/diagnosis-report-generator';
-
-// Mock data - in a real app, you'd fetch this based on params.patientId
-const patient = {
-  id: 'pat_002',
-  name: 'Jane Smith',
-  age: 45,
-  gender: 'Female',
-  bloodType: 'O+',
-  deviceId: 'DEV_B',
-  vitals: {
-    heartRate: '98 bpm',
-    bloodPressure: '130/85 mmHg',
-    temperature: '99.1°F',
-    SpO2: '97%',
-  },
-  history: [
-    { id: 'REC-001', date: '2023-10-20', type: 'ECG', result: 'Normal Sinus Rhythm' },
-    { id: 'REC-002', date: '2023-10-15', type: 'Blood Test', result: 'Cholesterol High' },
-  ],
-};
+import { reports, patients } from '@/lib/data';
+import { useMemo } from 'react';
 
 const vitalsCards = [
-    { title: "Heart Rate", value: patient.vitals.heartRate, icon: Heart, color: "text-red-500" },
-    { title: "Blood Pressure", value: patient.vitals.bloodPressure, icon: Droplets, color: "text-blue-500" },
-    { title: "Temperature", value: patient.vitals.temperature, icon: Thermometer, color: "text-orange-500" },
-    { title: "SpO2", value: patient.vitals.SpO2, icon: Activity, color: "text-green-500" },
+    { title: "Heart Rate", value: "98 bpm", icon: Heart, color: "text-red-500" },
+    { title: "Blood Pressure", value: "130/85 mmHg", icon: Droplets, color: "text-blue-500" },
+    { title: "Temperature", value: "99.1°F", icon: Thermometer, color: "text-orange-500" },
+    { title: "SpO2", value: "97%", icon: Activity, color: "text-green-500" },
 ];
 
 export default function PatientDetailPage() {
   const params = useParams<{ patientId: string }>();
+
+  // Find the patient and their report from the mock data
+  const patient = useMemo(() => patients.find(p => p.id === params.patientId), [params.patientId]);
+  const report = useMemo(() => reports.find(r => r.patientInfo.patientId === params.patientId), [params.patientId]);
+
+  if (!patient) {
+    return <div>Patient not found.</div>;
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <Card>
         <CardHeader>
           <CardTitle className="text-3xl">Patient: {patient.name}</CardTitle>
           <CardDescription>
-            ID: {params.patientId} | Age: {patient.age} | Gender: {patient.gender} | Device ID: {patient.deviceId}
+            ID: {patient.id} | Age: {report?.patientInfo.age} | Gender: {report?.patientInfo.gender} | Device ID: {patient.deviceId || 'N/A'}
           </CardDescription>
         </CardHeader>
       </Card>
@@ -73,37 +64,32 @@ export default function PatientDetailPage() {
                 <PatientVitalsChart />
             </CardContent>
         </Card>
-        <Card>
-            <CardHeader>
-                <CardTitle>Previous Records</CardTitle>
-                <CardDescription>Historical data for {patient.name}.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                 <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Record ID</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Result</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {patient.history.map((record) => (
-                        <TableRow key={record.id}>
-                          <TableCell className="font-mono">{record.id}</TableCell>
-                          <TableCell>{record.date}</TableCell>
-                           <TableCell>{record.type}</TableCell>
-                          <TableCell>{record.result}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-            </CardContent>
-        </Card>
+        {report ? (
+             <Card>
+                <CardHeader>
+                    <CardTitle>Patient History</CardTitle>
+                    <CardDescription>From report dated {report.patientInfo.visitDate}.</CardDescription>
+                </CardHeader>
+                <CardContent className="prose prose-sm max-w-none text-sm">
+                    <p><strong>Presenting Complaint:</strong> {report.medicalHistory.complaint}</p>
+                    <p><strong>History of Present Illness:</strong> {report.medicalHistory.hpi}</p>
+                    <p><strong>Past Medical History:</strong> {report.medicalHistory.pastMedicalHistory}</p>
+                    <p><strong>Diagnosis:</strong> {report.investigations.diagnosis}</p>
+                </CardContent>
+            </Card>
+        ) : (
+             <Card>
+                <CardHeader>
+                    <CardTitle>No Report Found</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p>There is no detailed report for this patient yet.</p>
+                </CardContent>
+            </Card>
+        )}
       </div>
 
-      <DiagnosisReportGenerator />
+      <DiagnosisReportGenerator patientId={patient.id} />
     </div>
   );
 }
