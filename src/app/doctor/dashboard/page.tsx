@@ -1,8 +1,12 @@
 
+'use client';
+
+import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Users, Activity, AlertCircle, HeartPulse } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Users, Activity, AlertCircle, HeartPulse, Eye } from 'lucide-react';
 import DiagnosisReportGenerator from '@/components/diagnosis-report-generator';
 import PatientVitalsChart from '@/components/patient-charts';
 
@@ -23,6 +27,8 @@ const stats = [
 
 
 export default function DoctorDashboard() {
+  const [selectedPatient, setSelectedPatient] = useState(patients[1]); // Default to Jane Smith
+
   return (
     <div className="flex flex-col gap-6">
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -43,7 +49,7 @@ export default function DoctorDashboard() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Patient Records</CardTitle>
-            <CardDescription>Overview of all currently admitted patients.</CardDescription>
+            <CardDescription>Select a patient to view their live vital signs.</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -53,11 +59,16 @@ export default function DoctorDashboard() {
                   <TableHead>Status</TableHead>
                   <TableHead>Risk Level</TableHead>
                   <TableHead>Last Check-in</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {patients.map((patient) => (
-                  <TableRow key={patient.id}>
+                  <TableRow 
+                    key={patient.id} 
+                    onClick={() => setSelectedPatient(patient)}
+                    className={`cursor-pointer ${selectedPatient.id === patient.id ? 'bg-muted' : ''}`}
+                  >
                     <TableCell className="font-medium">{patient.name}</TableCell>
                     <TableCell>
                        <Badge variant={patient.status === 'Unstable' ? 'destructive' : 'secondary'}>
@@ -72,6 +83,11 @@ export default function DoctorDashboard() {
                       </Badge>
                     </TableCell>
                     <TableCell>{patient.lastCheck}</TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="icon" onClick={() => setSelectedPatient(patient)}>
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -83,7 +99,7 @@ export default function DoctorDashboard() {
             <Card>
                 <CardHeader>
                     <CardTitle>Live Vitals</CardTitle>
-                    <CardDescription>Real-time ECG for Jane Smith.</CardDescription>
+                    <CardDescription>Real-time ECG for {selectedPatient.name}.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <PatientVitalsChart />
