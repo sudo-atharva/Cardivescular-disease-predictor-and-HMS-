@@ -44,9 +44,9 @@ type DashboardLayoutProps = {
 
 const doctorNav = [
   { name: 'Dashboard', href: '/doctor/dashboard', icon: LayoutDashboard },
-  { name: 'Patients', href: '#', icon: Users },
-  { name: 'Reports', href: '#', icon: FileText },
-  { name: 'Analytics', href: '#', icon: BarChart3 },
+  { name: 'Patients', href: '/doctor/patients', icon: Users },
+  { name: 'Reports', href: '/doctor/reports', icon: FileText },
+  { name: 'Analytics', href: '/doctor/analytics', icon: BarChart3 },
 ];
 
 const patientNav = [
@@ -55,7 +55,7 @@ const patientNav = [
   { name: 'Vitals History', href: '#', icon: Stethoscope },
 ];
 
-const commonNav = [{ name: 'Settings', href: '#', icon: Settings }];
+const commonNav = [{ name: 'Settings', href: '/settings', icon: Settings }];
 
 export default function DashboardLayout({ children, userType }: DashboardLayoutProps) {
   const pathname = usePathname();
