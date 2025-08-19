@@ -1,12 +1,12 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useActionState, useEffect } from 'react';
+import { useFormStatus } from 'react-dom';
 import { createDiagnosisReport } from '@/lib/actions';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Bot, Loader2 } from 'lucide-react';
 
@@ -26,7 +26,7 @@ function SubmitButton() {
 }
 
 export default function DiagnosisReportGenerator() {
-  const [state, formAction] = useFormState(createDiagnosisReport, initialState);
+  const [state, formAction] = useActionState(createDiagnosisReport, initialState);
   const { toast } = useToast();
 
   useEffect(() => {
