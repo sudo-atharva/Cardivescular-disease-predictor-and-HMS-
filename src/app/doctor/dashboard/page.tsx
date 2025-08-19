@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -9,25 +9,50 @@ import { Badge } from '@/components/ui/badge';
 import { Users, Activity, AlertCircle, Eye } from 'lucide-react';
 import PatientVitalsChart from '@/components/patient-charts';
 import { Button } from '@/components/ui/button';
-
-const patients = [
-  { id: 'pat_001', name: 'John Doe', status: 'Stable', lastCheck: '2 hours ago', risk: 'Low', deviceId: 'DEV_A', isLive: false },
-  { id: 'pat_002', name: 'Jane Smith', status: 'Unstable', lastCheck: '15 mins ago', risk: 'High', deviceId: 'DEV_B', isLive: true },
-  { id: 'pat_003', name: 'Robert Brown', status: 'Stable', lastCheck: '1 day ago', risk: 'Low', deviceId: null, isLive: false },
-  { id: 'pat_004', name: 'Emily White', status: 'Monitoring', lastCheck: '45 mins ago', risk: 'Medium', deviceId: 'DEV_D', isLive: true },
-];
+import { patients } from '@/lib/data';
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { cn } from '@/lib/utils';
 
 const livePatients = patients.filter(p => p.isLive);
+const highRiskPatients = patients.filter(p => p.status === 'Unstable' || p.risk === 'High');
 
 const stats = [
-    { title: "Total Patients", value: "4", icon: Users, color: "text-blue-500" },
+    { title: "Total Patients", value: patients.length, icon: Users, color: "text-blue-500" },
     { title: "Live Monitoring", value: livePatients.length.toString(), icon: Activity, color: "text-green-500" },
-    { title: "High-Risk Alerts", value: "1", icon: AlertCircle, color: "text-red-500" },
+    { title: "High-Risk Alerts", value: highRiskPatients.length, icon: AlertCircle, color: "text-red-500" },
 ];
 
 export default function DoctorDashboard() {
+  const [showAlert, setShowAlert] = useState(false);
+
+  useEffect(() => {
+    if (highRiskPatients.length > 0) {
+      setShowAlert(true);
+    }
+  }, []);
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className={cn("flex flex-col gap-6", showAlert && 'animate-pulse-red-bg')}>
+      <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-6 w-6 text-destructive" />
+              Critical Patient Alert!
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              The following patient(s) require immediate attention due to unstable vitals or high-risk status:
+              <ul className="list-disc pl-5 mt-2 font-semibold text-destructive">
+                {highRiskPatients.map(p => <li key={p.id}>{p.name}</li>)}
+              </ul>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowAlert(false)}>Acknowledge</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {stats.map(stat => (
           <Card key={stat.title}>
@@ -78,7 +103,7 @@ export default function DoctorDashboard() {
             </TableHeader>
             <TableBody>
               {patients.map((patient) => (
-                <TableRow key={patient.id} className="cursor-pointer">
+                <TableRow key={patient.id} className={cn("cursor-pointer", patient.risk === 'High' && 'bg-destructive/10 hover:bg-destructive/20')}>
                   <TableCell className="font-medium">{patient.name}</TableCell>
                   <TableCell>
                       <Badge variant={patient.status === 'Unstable' ? 'destructive' : 'secondary'}>
