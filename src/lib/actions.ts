@@ -29,7 +29,7 @@ function getPatientHistoryAsString(patientId: string): string {
         `Treatment Plan: ${report.treatmentPlan.plan}`
     ];
 
-    return historyParts.filter(part => part.split(':')[1].trim()).join('\\n');
+    return historyParts.filter(part => part.split(':')[1].trim()).join('\n');
 }
 
 
