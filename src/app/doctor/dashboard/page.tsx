@@ -42,10 +42,10 @@ export default function DoctorDashboard() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               The following patient(s) require immediate attention due to unstable vitals or high-risk status:
-              <ul className="list-disc pl-5 mt-2 font-semibold text-destructive">
+            </AlertDialogDescription>
+             <ul className="list-disc pl-5 pt-2 text-sm font-semibold text-destructive">
                 {highRiskPatients.map(p => <li key={p.id}>{p.name}</li>)}
               </ul>
-            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogAction onClick={() => setShowAlert(false)}>Acknowledge</AlertDialogAction>
