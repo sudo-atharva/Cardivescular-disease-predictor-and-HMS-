@@ -1,6 +1,7 @@
 
 'use client';
 
+import { useParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -35,7 +36,8 @@ const vitalsCards = [
     { title: "SpO2", value: patient.vitals.SpO2, icon: Activity, color: "text-green-500" },
 ];
 
-export default function PatientDetailPage({ params }: { params: { patientId: string } }) {
+export default function PatientDetailPage() {
+  const params = useParams<{ patientId: string }>();
   return (
     <div className="flex flex-col gap-6">
       <Card>
