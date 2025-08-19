@@ -17,7 +17,6 @@ const generateChartData = (points = 50, amplitude = 5, frequency = 0.2) => {
 };
 
 const ecgData = generateChartData(100, 1, 0.5);
-const ppgData = generateChartData(100, 1.5, 0.4);
 
 const chartConfig = {
   value: {
@@ -26,10 +25,6 @@ const chartConfig = {
   ecg: {
     label: 'ECG',
     color: 'hsl(var(--chart-1))',
-  },
-  ppg: {
-    label: 'PPG',
-    color: 'hsl(var(--chart-2))',
   },
 } satisfies ChartConfig;
 
@@ -45,7 +40,7 @@ export default function PatientVitalsChart() {
     }
 
   return (
-    <div className="grid md:grid-cols-1 gap-6">
+    <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold mb-2">ECG (Electrocardiogram)</h3>
         <ChartContainer config={chartConfig} className="h-[250px] w-full">
@@ -79,7 +74,7 @@ export default function PatientVitalsChart() {
       <div>
         <h3 className="text-lg font-semibold mb-2">PPG (Photoplethysmogram)</h3>
          <ChartContainer config={chartConfig} className="h-[250px] w-full">
-          <AreaChart data={ppgData} margin={{ left: -20, right: 10, top: 5, bottom: 5 }}>
+          <AreaChart data={ecgData} margin={{ left: -20, right: 10, top: 5, bottom: 5 }}>
             <defs>
               <linearGradient id="fillPpg" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="var(--color-ppg)" stopOpacity={0.8} />
