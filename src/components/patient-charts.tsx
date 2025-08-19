@@ -26,6 +26,10 @@ const chartConfig = {
     label: 'ECG',
     color: 'hsl(var(--chart-1))',
   },
+  ppg: {
+    label: 'PPG',
+    color: 'hsl(var(--chart-2))',
+  }
 } satisfies ChartConfig;
 
 export default function PatientVitalsChart() {
