@@ -12,8 +12,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const GenerateDiagnosisReportInputSchema = z.object({
-  ecgReadings: z.string().describe('The ECG readings data.'),
-  ppgReadings: z.string().describe('The PPG readings data.'),
+  vitalsData: z.string().describe('A JSON string containing an array of vital signs readings. Each reading should include ts, id, ppg, ecg, hr, spo2, and ptt.'),
   patientHistory: z.string().describe('The patient\'s medical history.'),
 });
 export type GenerateDiagnosisReportInput = z.infer<typeof GenerateDiagnosisReportInputSchema>;
@@ -31,15 +30,17 @@ const prompt = ai.definePrompt({
   name: 'generateDiagnosisReportPrompt',
   input: {schema: GenerateDiagnosisReportInputSchema},
   output: {schema: GenerateDiagnosisReportOutputSchema},
-  prompt: `You are an AI assistant specialized in generating preliminary diagnosis reports for doctors based on ECG and PPG readings, and the patient's medical history.
+  prompt: `You are an AI assistant specialized in generating preliminary diagnosis reports for doctors based on vital signs data and the patient's medical history.
 
-  Based on the following information, generate a concise diagnosis report:
+  Based on the following information, generate a concise diagnosis report. Analyze the provided JSON data for trends, anomalies, or critical values in heart rate (hr), SpO2 (spo2), PPG, and ECG readings.
 
-  ECG Readings: {{{ecgReadings}}}
-  PPG Readings: {{{ppgReadings}}}
-  Patient History: {{{patientHistory}}}
+  Vital Signs Data (JSON):
+  {{{vitalsData}}}
 
-  Include potential health risks and recommendations for further assessment.
+  Patient History:
+  {{{patientHistory}}}
+
+  Include potential health risks and recommendations for further assessment based on your analysis of the data.
   `,
 });
 
