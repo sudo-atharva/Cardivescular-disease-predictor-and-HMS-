@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -34,6 +35,7 @@ export default function PatientsPage() {
         gender: formData.get('gender') as string,
         visitDate: formData.get('visitDate') as string,
         address: formData.get('address') as string,
+        password: formData.get('password') as string,
       },
       medicalHistory: {
         complaint: formData.get('complaint') as string,
@@ -127,6 +129,10 @@ export default function PatientsPage() {
                         <div className="space-y-2">
                             <Label htmlFor="address">Address & Contact</Label>
                             <Textarea id="address" name="address" placeholder="123 Health St, Medcity..." required />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="password">Set Patient Password</Label>
+                            <Input id="password" name="password" type="password" required />
                         </div>
                       </AccordionContent>
                     </AccordionItem>

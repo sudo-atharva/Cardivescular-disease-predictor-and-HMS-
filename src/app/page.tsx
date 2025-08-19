@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Stethoscope, UserPlus, HeartPulse } from 'lucide-react';
+import { Stethoscope, User, HeartPulse } from 'lucide-react';
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +20,7 @@ export default function AuthPage() {
     router.push('/doctor/dashboard');
   };
 
-  const handlePatientRegister = (e: React.FormEvent) => {
+  const handlePatientLogin = (e: React.FormEvent) => {
     e.preventDefault();
     // Mock registration logic
     router.push('/patient/dashboard');
@@ -43,7 +44,7 @@ export default function AuthPage() {
                 <Stethoscope className="mr-2 h-4 w-4" /> Doctor Login
               </TabsTrigger>
               <TabsTrigger value="patient">
-                <UserPlus className="mr-2 h-4 w-4" /> Patient Sign Up
+                <User className="mr-2 h-4 w-4" /> Patient Login
               </TabsTrigger>
             </TabsList>
             <TabsContent value="doctor">
@@ -60,20 +61,16 @@ export default function AuthPage() {
               </form>
             </TabsContent>
             <TabsContent value="patient">
-              <form onSubmit={handlePatientRegister} className="space-y-4 pt-4">
+              <form onSubmit={handlePatientLogin} className="space-y-4 pt-4">
                  <div className="space-y-2">
-                  <Label htmlFor="patient-name">Full Name</Label>
-                  <Input id="patient-name" type="text" placeholder="John Doe" required />
+                  <Label htmlFor="patient-id">Patient ID</Label>
+                  <Input id="patient-id" type="text" placeholder="pat_001" required />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="patient-email">Email</Label>
-                  <Input id="patient-email" type="email" placeholder="patient@email.com" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="patient-password">Create Password</Label>
+                  <Label htmlFor="patient-password">Password</Label>
                   <Input id="patient-password" type="password" required />
                 </div>
-                <Button type="submit" className="w-full bg-accent hover:bg-accent/90">Create Account</Button>
+                <Button type="submit" className="w-full bg-accent hover:bg-accent/90">Sign In</Button>
               </form>
             </TabsContent>
           </Tabs>
