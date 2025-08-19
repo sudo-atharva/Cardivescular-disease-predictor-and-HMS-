@@ -3,17 +3,17 @@
 
 import * as React from 'react';
 import { useToast } from '@/components/ui/use-toast';
-import { addReport, Patient, Report } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Save } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import type { User, Report } from '@/lib/models';
 
 type CreateReportFormProps = {
-  patient: Patient;
-  onFormSubmit: () => void;
+  patient: User;
+  onFormSubmit: (newReport?: Report) => void;
   latestReport: Report | null;
 };
 
@@ -21,14 +21,13 @@ export default function CreateReportForm({ patient, onFormSubmit, latestReport }
   const { toast } = useToast();
   const formRef = React.useRef<HTMLFormElement>(null);
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    const newReport = {
-      id: `rep_${Date.now()}`,
+    const newReportPayload = {
       patientInfo: {
         fullName: patient.name,
-        patientId: patient.id,
+        patientId: patient.userId,
         age: formData.get('age') as string,
         gender: formData.get('gender') as string,
         visitDate: formData.get('visitDate') as string,
@@ -61,14 +60,34 @@ export default function CreateReportForm({ patient, onFormSubmit, latestReport }
       mlDiagnosis: "Awaiting ML model analysis.",
     };
     
-    addReport(newReport);
-    
-    toast({
-      title: "Report Saved",
-      description: `A new report for ${patient.name} has been created.`,
-    });
-    
-    onFormSubmit();
+    try {
+      const res = await fetch('/api/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newReportPayload),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Failed to save report');
+      }
+
+      const createdReport = await res.json();
+      
+      toast({
+        title: "Report Saved",
+        description: `A new report for ${patient.name} has been created.`,
+      });
+      
+      onFormSubmit(createdReport);
+    } catch(err: any) {
+        toast({
+            variant: 'destructive',
+            title: "Error creating report",
+            description: err.message,
+        });
+    }
+
   };
 
   return (
@@ -84,7 +103,7 @@ export default function CreateReportForm({ patient, onFormSubmit, latestReport }
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="patientId">Patient ID / UHID</Label>
-                  <Input id="patientId" name="patientId" defaultValue={patient.id} disabled />
+                  <Input id="patientId" name="patientId" defaultValue={patient.userId} disabled />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

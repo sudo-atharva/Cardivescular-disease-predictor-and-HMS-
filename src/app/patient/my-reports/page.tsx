@@ -1,14 +1,53 @@
+
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
-import { reports } from '@/lib/data';
+import type { Report } from '@/lib/models';
+import { Skeleton } from '@/components/ui/skeleton';
 
-// In a real app, we'd filter reports for the logged-in user.
-// Here we'll show the first report as an example for "John Doe"
-const patientReports = reports.filter(r => r.patientInfo.fullName === 'John Doe' || reports.indexOf(r) === 0);
+
+const patientId = "pat_001"; // Mock patient ID for the logged in user
 
 export default function PatientReportsPage() {
+  const [reports, setReports] = useState<Report[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchReports = async () => {
+      setIsLoading(true);
+      try {
+        const res = await fetch(`/api/patients/${patientId}/reports`);
+        if (!res.ok) throw new Error('Failed to fetch reports');
+        const data = await res.json();
+        setReports(data);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchReports();
+  }, []);
+
+
+  if (isLoading) {
+     return (
+        <Card>
+            <CardHeader>
+                <Skeleton className="h-8 w-1/2" />
+                <Skeleton className="h-4 w-3/4" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+            </CardContent>
+        </Card>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <Card>
@@ -17,12 +56,12 @@ export default function PatientReportsPage() {
           <CardDescription>Here are your available health reports.</CardDescription>
         </CardHeader>
         <CardContent>
-          {patientReports.length === 0 ? (
+          {reports.length === 0 ? (
             <p>You do not have any reports yet.</p>
           ) : (
             <Accordion type="multiple" className="w-full space-y-4">
-              {patientReports.map((report) => (
-                 <AccordionItem value={`item-${report.id}`} key={report.id} className="border rounded-lg px-4">
+              {reports.map((report) => (
+                 <AccordionItem value={`item-${report.reportId}`} key={report.reportId} className="border rounded-lg px-4">
                   <AccordionTrigger className="text-lg font-semibold">
                     Report from {report.patientInfo.visitDate}
                   </AccordionTrigger>

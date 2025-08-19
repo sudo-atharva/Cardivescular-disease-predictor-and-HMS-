@@ -8,6 +8,7 @@ export interface User {
   email?: string; // Optional for patients
   role: 'doctor' | 'patient';
   passwordHash: string;
+  createdAt: Date;
   // Doctor specific
   patients?: string[]; // Array of patient userIds
   // Patient specific

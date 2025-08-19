@@ -9,27 +9,63 @@ import { Badge } from '@/components/ui/badge';
 import { Users, Activity, AlertCircle, Eye } from 'lucide-react';
 import PatientVitalsChart from '@/components/patient-charts';
 import { Button } from '@/components/ui/button';
-import { patients } from '@/lib/data';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
+import type { User } from '@/lib/models';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const livePatients = patients.filter(p => p.isLive);
-const highRiskPatients = patients.filter(p => p.status === 'Unstable' || p.risk === 'High');
 
-const stats = [
+export default function DoctorDashboard() {
+  const [patients, setPatients] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showAlert, setShowAlert] = useState(false);
+
+  useEffect(() => {
+    const fetchPatients = async () => {
+      try {
+        setIsLoading(true);
+        const res = await fetch('/api/patients');
+        if (!res.ok) {
+          throw new Error('Failed to fetch patients');
+        }
+        const data = await res.json();
+        setPatients(data);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchPatients();
+  }, []);
+
+  const livePatients = patients.filter(p => p.isLive);
+  const highRiskPatients = patients.filter(p => p.status === 'Unstable' || p.risk === 'High');
+
+   const stats = [
     { title: "Total Patients", value: patients.length, icon: Users, color: "text-blue-500" },
     { title: "Live Monitoring", value: livePatients.length.toString(), icon: Activity, color: "text-green-500" },
     { title: "High-Risk Alerts", value: highRiskPatients.length, icon: AlertCircle, color: "text-red-500" },
 ];
 
-export default function DoctorDashboard() {
-  const [showAlert, setShowAlert] = useState(false);
-
   useEffect(() => {
-    if (highRiskPatients.length > 0) {
+    if (!isLoading && highRiskPatients.length > 0) {
       setShowAlert(true);
     }
-  }, []);
+  }, [isLoading, highRiskPatients.length]);
+
+  if (isLoading) {
+    return (
+        <div className="flex flex-col gap-6">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <Skeleton className="h-28" />
+                <Skeleton className="h-28" />
+                <Skeleton className="h-28" />
+            </div>
+            <Skeleton className="h-96" />
+        </div>
+    )
+  }
 
   return (
     <div className={cn("flex flex-col gap-6", showAlert && 'animate-pulse-red-bg')}>
@@ -44,7 +80,7 @@ export default function DoctorDashboard() {
               The following patient(s) require immediate attention due to unstable vitals or high-risk status:
             </AlertDialogDescription>
              <ul className="list-disc pl-5 pt-2 text-sm font-semibold text-destructive">
-                {highRiskPatients.map(p => <li key={p.id}>{p.name}</li>)}
+                {highRiskPatients.map(p => <li key={p.userId}>{p.name}</li>)}
               </ul>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -71,7 +107,7 @@ export default function DoctorDashboard() {
         <div className="space-y-6">
             <h2 className="text-2xl font-bold tracking-tight">Live Vitals</h2>
             {livePatients.map(patient => (
-                 <Card key={patient.id}>
+                 <Card key={patient.userId}>
                     <CardHeader>
                         <CardTitle>{patient.name}</CardTitle>
                         <CardDescription>Device ID: {patient.deviceId}</CardDescription>
@@ -103,7 +139,7 @@ export default function DoctorDashboard() {
             </TableHeader>
             <TableBody>
               {patients.map((patient) => (
-                <TableRow key={patient.id} className={cn("cursor-pointer", patient.risk === 'High' && 'bg-destructive/10 hover:bg-destructive/20')}>
+                <TableRow key={patient.userId} className={cn("cursor-pointer", patient.risk === 'High' && 'bg-destructive/10 hover:bg-destructive/20')}>
                   <TableCell className="font-medium">{patient.name}</TableCell>
                   <TableCell>
                       <Badge variant={patient.status === 'Unstable' ? 'destructive' : 'secondary'}>
@@ -121,7 +157,7 @@ export default function DoctorDashboard() {
                   <TableCell className="font-mono">{patient.deviceId || 'N/A'}</TableCell>
                     <TableCell>
                       <Button asChild variant="ghost" size="icon">
-                        <Link href={`/doctor/patients/${patient.id}`} target="_blank">
+                        <Link href={`/doctor/patients/${patient.userId}`} target="_blank">
                            <Eye className="h-4 w-4" />
                         </Link>
                       </Button>

@@ -3,15 +3,15 @@
 
 import { useParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Heart, Droplets, Thermometer, Activity, PlusCircle } from 'lucide-react';
 import PatientVitalsChart from '@/components/patient-charts';
 import DiagnosisReportGenerator from '@/components/diagnosis-report-generator';
-import { reports, patients, Report } from '@/lib/data';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import CreateReportForm from '@/components/create-report-form';
+import type { Report, User } from '@/lib/models';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 const vitalsCards = [
@@ -25,20 +25,73 @@ export default function PatientDetailPage() {
   const params = useParams();
   const patientId = params.patientId as string;
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [patient, setPatient] = useState<User | null>(null);
+  const [reports, setReports] = useState<Report[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Find the patient and their reports from the mock data
-  const patient = useMemo(() => patients.find(p => p.id === patientId), [patientId]);
-  const patientReports = useMemo(() => reports.filter(r => r.patientInfo.patientId === patientId).sort((a, b) => new Date(b.patientInfo.visitDate).getTime() - new Date(a.patientInfo.visitDate).getTime()), [patientId]);
-  const latestReport = useMemo(() => patientReports.length > 0 ? patientReports[0] : null, [patientReports]);
+  useEffect(() => {
+    if (!patientId) return;
+
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const [patientRes, reportsRes] = await Promise.all([
+          fetch(`/api/patients/${patientId}`),
+          fetch(`/api/patients/${patientId}/reports`)
+        ]);
+
+        if (patientRes.ok) {
+          const patientData = await patientRes.json();
+          setPatient(patientData);
+        } else {
+           console.error('Failed to fetch patient data');
+        }
+
+        if (reportsRes.ok) {
+           const reportsData = await reportsRes.json();
+           setReports(reportsData);
+        } else {
+            console.error('Failed to fetch reports data');
+        }
+      } catch (error) {
+        console.error('Error fetching data', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [patientId]);
+
+  const latestReport = useMemo(() => (reports.length > 0 ? reports[0] : null), [reports]);
+
+  const handleDialogClose = (newReport?: Report) => {
+    setIsDialogOpen(false);
+    if(newReport) {
+        setReports(prev => [newReport, ...prev]);
+    }
+  }
+
+  if (isLoading) {
+    return (
+        <div className="flex flex-col gap-6">
+            <Skeleton className="h-32" />
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                <Skeleton className="h-28" />
+                <Skeleton className="h-28" />
+                <Skeleton className="h-28" />
+                <Skeleton className="h-28" />
+            </div>
+             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Skeleton className="h-96" />
+                <Skeleton className="h-96" />
+             </div>
+        </div>
+    )
+  }
 
   if (!patient) {
     return <div>Patient not found.</div>;
-  }
-  
-  const handleDialogClose = () => {
-    setIsDialogOpen(false);
-    // In a real app, you might want to force a re-render here to see the new report.
-    // For our mock data setup, the new report will appear on the main reports page.
   }
 
   return (
@@ -48,7 +101,7 @@ export default function PatientDetailPage() {
             <div className="flex-1">
               <CardTitle className="text-3xl">Patient: {patient.name}</CardTitle>
               <CardDescription>
-                ID: {patient.id} | Age: {latestReport?.patientInfo.age} | Gender: {latestReport?.patientInfo.gender} | Device ID: {patient.deviceId || 'N/A'}
+                ID: {patient.userId} | Age: {latestReport?.patientInfo.age} | Gender: {latestReport?.patientInfo.gender} | Device ID: {patient.deviceId || 'N/A'}
               </CardDescription>
             </div>
              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -119,7 +172,7 @@ export default function PatientDetailPage() {
         )}
       </div>
 
-      <DiagnosisReportGenerator patientId={patient.id} />
+      <DiagnosisReportGenerator patientId={patient.userId} />
     </div>
   );
 }

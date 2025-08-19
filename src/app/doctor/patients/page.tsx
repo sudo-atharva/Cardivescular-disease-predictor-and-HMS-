@@ -13,25 +13,47 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { patients, reports, addReport, addPatient } from '@/lib/data';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/use-toast';
+import type { User } from '@/lib/models';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 export default function PatientsPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [patients, setPatients] = React.useState<User[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const fetchPatients = React.useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const res = await fetch('/api/patients');
+      if (!res.ok) throw new Error('Failed to fetch');
+      const data = await res.json();
+      setPatients(data);
+    } catch (error) {
+      console.error(error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch patients.' });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
+
+  React.useEffect(() => {
+    fetchPatients();
+  }, [fetchPatients]);
+
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const patientId = formData.get('patientId') as string;
     const fullName = formData.get('fullName') as string;
     
-    const newReport = {
-      id: `rep_${Date.now()}`,
+    const newReportPayload = {
       patientInfo: {
         fullName: fullName,
         patientId: patientId,
@@ -65,22 +87,34 @@ export default function PatientsPage() {
         regNumber: formData.get('regNumber') as string,
         signature: formData.get('signature') as string,
       },
-      mlDiagnosis: "Awaiting ML model analysis. Generate from the patient's detail page.",
     };
     
-    // Add the report which also creates the patient if they don't exist
-    addReport(newReport);
-    
-    toast({
-      title: "Patient Saved",
-      description: `${newReport.patientInfo.fullName} has been added and a report created.`,
-    });
-    
-    setIsDialogOpen(false);
-    // This is a way to trigger a re-render to show the new patient/report in lists
-    router.refresh(); 
-  };
+    try {
+        const res = await fetch('/api/reports', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newReportPayload)
+        });
 
+        if (!res.ok) {
+            throw new Error('Failed to save patient');
+        }
+        
+        toast({
+          title: "Patient Saved",
+          description: `${newReportPayload.patientInfo.fullName} has been added and a report created.`,
+        });
+        
+        setIsDialogOpen(false);
+        fetchPatients(); // Refetch patients to update the list
+    } catch(error: any) {
+        toast({
+          variant: 'destructive',
+          title: "Error",
+          description: error.message || 'An error occurred while saving the patient.',
+        });
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -245,6 +279,13 @@ export default function PatientsPage() {
           </Dialog>
         </CardHeader>
         <CardContent>
+           {isLoading ? (
+             <div className="space-y-4">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+             </div>
+            ) : (
           <Table>
             <TableHeader>
               <TableRow>
@@ -259,8 +300,8 @@ export default function PatientsPage() {
             </TableHeader>
             <TableBody>
               {patients.map((patient) => (
-                <TableRow key={patient.id}>
-                  <TableCell className="font-mono">{patient.id}</TableCell>
+                <TableRow key={patient.userId}>
+                  <TableCell className="font-mono">{patient.userId}</TableCell>
                   <TableCell className="font-medium">{patient.name}</TableCell>
                   <TableCell className="font-mono">{patient.deviceId || 'N/A'}</TableCell>
                   <TableCell>
@@ -278,7 +319,7 @@ export default function PatientsPage() {
                   <TableCell>{patient.lastCheck}</TableCell>
                   <TableCell>
                      <Button asChild variant="outline" size="sm">
-                        <Link href={`/doctor/patients/${patient.id}`}>
+                        <Link href={`/doctor/patients/${patient.userId}`}>
                            <Eye className="mr-2 h-4 w-4" />
                            View Details
                         </Link>
@@ -288,6 +329,7 @@ export default function PatientsPage() {
               ))}
             </TableBody>
           </Table>
+            )}
         </CardContent>
       </Card>
     </div>

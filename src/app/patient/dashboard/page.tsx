@@ -5,15 +5,44 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import PatientVitalsChart from '@/components/patient-charts';
-import { reports } from '@/lib/data';
-import { useMemo } from 'react';
+import type { Report } from '@/lib/models';
+import { useMemo, useState, useEffect } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const patientName = "John Doe";
-const patientId = "pat_001";
+const patientId = "pat_001"; // Mock patient ID for the logged in user
 
 export default function PatientDashboard() {
+  const [reports, setReports] = useState<Report[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const patientReports = useMemo(() => reports.filter(r => r.patientInfo.patientId === patientId), []);
+  useEffect(() => {
+    const fetchReports = async () => {
+      setIsLoading(true);
+      try {
+        const res = await fetch(`/api/patients/${patientId}/reports`);
+        if (!res.ok) throw new Error('Failed to fetch reports');
+        const data = await res.json();
+        setReports(data);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchReports();
+  }, []);
+
+
+  if (isLoading) {
+    return (
+        <div className="flex flex-col gap-6">
+            <Skeleton className="h-24" />
+            <Skeleton className="h-96" />
+            <Skeleton className="h-64" />
+        </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -52,14 +81,14 @@ export default function PatientDashboard() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {patientReports.length === 0 && (
+              {reports.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center">You have no reports yet.</TableCell>
                 </TableRow>
               )}
-              {patientReports.map((report) => (
-                <TableRow key={report.id}>
-                  <TableCell className="font-medium">{report.id}</TableCell>
+              {reports.map((report) => (
+                <TableRow key={report.reportId}>
+                  <TableCell className="font-medium">{report.reportId}</TableCell>
                   <TableCell>{report.patientInfo.visitDate}</TableCell>
                   <TableCell>{report.investigations.diagnosis}</TableCell>
                   <TableCell>

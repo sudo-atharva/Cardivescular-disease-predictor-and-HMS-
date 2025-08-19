@@ -1,13 +1,52 @@
+
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
-import { reports } from '@/lib/data';
 import PatientVitalsChart from '@/components/patient-charts';
 import { Button } from '@/components/ui/button';
 import { Printer } from 'lucide-react';
+import type { Report } from '@/lib/models';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ReportsPage() {
+  const [reports, setReports] = useState<Report[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchReports = async () => {
+      setIsLoading(true);
+      try {
+        const res = await fetch('/api/reports');
+        if (!res.ok) throw new Error('Failed to fetch reports');
+        const data = await res.json();
+        setReports(data);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchReports();
+  }, []);
+
+  if (isLoading) {
+    return (
+        <Card>
+            <CardHeader>
+                <Skeleton className="h-8 w-1/2" />
+                <Skeleton className="h-4 w-3/4" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+            </CardContent>
+        </Card>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <Card>
@@ -21,9 +60,9 @@ export default function ReportsPage() {
           ) : (
             <Accordion type="multiple" className="w-full space-y-4">
               {reports.map((report) => (
-                <AccordionItem value={`item-${report.id}`} key={report.id} className="border rounded-lg px-4">
+                <AccordionItem value={`item-${report.reportId}`} key={report.reportId} className="border rounded-lg px-4">
                   <AccordionTrigger className="text-lg font-semibold">
-                    Report for {report.patientInfo.fullName} (ID: {report.patientInfo.patientId}) - {report.patientInfo.visitDate}
+                    Report for {report.patientInfo.fullName} (ID: {report.patientId}) - {report.patientInfo.visitDate}
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="prose prose-sm max-w-none printable-content">
