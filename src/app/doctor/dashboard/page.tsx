@@ -1,3 +1,4 @@
+
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -7,10 +8,10 @@ import PatientVitalsChart from '@/components/patient-charts';
 
 
 const patients = [
-  { name: 'John Doe', status: 'Stable', lastCheck: '2 hours ago', risk: 'Low' },
-  { name: 'Jane Smith', status: 'Unstable', lastCheck: '15 mins ago', risk: 'High' },
-  { name: 'Robert Brown', status: 'Stable', lastCheck: '1 day ago', risk: 'Low' },
-  { name: 'Emily White', status: 'Monitoring', lastCheck: '45 mins ago', risk: 'Medium' },
+  { id: 'pat_001', name: 'John Doe', status: 'Stable', lastCheck: '2 hours ago', risk: 'Low' },
+  { id: 'pat_002', name: 'Jane Smith', status: 'Unstable', lastCheck: '15 mins ago', risk: 'High' },
+  { id: 'pat_003', name: 'Robert Brown', status: 'Stable', lastCheck: '1 day ago', risk: 'Low' },
+  { id: 'pat_004', name: 'Emily White', status: 'Monitoring', lastCheck: '45 mins ago', risk: 'Medium' },
 ];
 
 const stats = [
@@ -56,7 +57,7 @@ export default function DoctorDashboard() {
               </TableHeader>
               <TableBody>
                 {patients.map((patient) => (
-                  <TableRow key={patient.name}>
+                  <TableRow key={patient.id}>
                     <TableCell className="font-medium">{patient.name}</TableCell>
                     <TableCell>
                        <Badge variant={patient.status === 'Unstable' ? 'destructive' : 'secondary'}>

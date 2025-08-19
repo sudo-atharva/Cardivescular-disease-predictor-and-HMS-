@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useActionState, useEffect } from 'react';
@@ -9,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Bot, Loader2 } from 'lucide-react';
+import { Input } from './ui/input';
 
 const initialState = {
   message: '',
@@ -43,7 +45,7 @@ export default function DiagnosisReportGenerator() {
     <Card>
       <CardHeader>
         <CardTitle>ML-Based Diagnosis Assistant</CardTitle>
-        <CardDescription>Enter patient data to generate a preliminary diagnosis report using our AI model.</CardDescription>
+        <CardDescription>Enter patient data to generate a preliminary diagnosis report using our AI model. The first line of the ECG/PPG data should be the patient ID.</CardDescription>
       </CardHeader>
       <form action={formAction}>
         <CardContent className="grid gap-6">
@@ -53,7 +55,7 @@ export default function DiagnosisReportGenerator() {
               <Textarea
                 id="ecgReadings"
                 name="ecgReadings"
-                placeholder="Paste raw ECG data here..."
+                placeholder="Patient ID on first line, then paste raw ECG data..."
                 className="min-h-[120px] font-mono"
                 required
               />
@@ -63,7 +65,7 @@ export default function DiagnosisReportGenerator() {
               <Textarea
                 id="ppgReadings"
                 name="ppgReadings"
-                placeholder="Paste raw PPG data here..."
+                placeholder="Patient ID on first line, then paste raw PPG data..."
                 className="min-h-[120px] font-mono"
                 required
               />
