@@ -3,13 +3,16 @@
 
 import { useParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Heart, Droplets, Thermometer, Activity } from 'lucide-react';
+import { Heart, Droplets, Thermometer, Activity, PlusCircle } from 'lucide-react';
 import PatientVitalsChart from '@/components/patient-charts';
 import DiagnosisReportGenerator from '@/components/diagnosis-report-generator';
-import { reports, patients } from '@/lib/data';
-import { useMemo } from 'react';
+import { reports, patients, Report } from '@/lib/data';
+import { useMemo, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import CreateReportForm from '@/components/create-report-form';
+
 
 const vitalsCards = [
     { title: "Heart Rate", value: "98 bpm", icon: Heart, color: "text-red-500" },
@@ -19,24 +22,49 @@ const vitalsCards = [
 ];
 
 export default function PatientDetailPage() {
-  const params = useParams<{ patientId: string }>();
+  const params = useParams();
+  const patientId = params.patientId as string;
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  // Find the patient and their report from the mock data
-  const patient = useMemo(() => patients.find(p => p.id === params.patientId), [params.patientId]);
-  const report = useMemo(() => reports.find(r => r.patientInfo.patientId === params.patientId), [params.patientId]);
+  // Find the patient and their reports from the mock data
+  const patient = useMemo(() => patients.find(p => p.id === patientId), [patientId]);
+  const patientReports = useMemo(() => reports.filter(r => r.patientInfo.patientId === patientId), [patientId]);
+  const latestReport = useMemo(() => patientReports.length > 0 ? patientReports[0] : null, [patientReports]);
 
   if (!patient) {
     return <div>Patient not found.</div>;
   }
+  
+  const handleDialogClose = () => {
+    setIsDialogOpen(false);
+    // In a real app, you might want to force a re-render here to see the new report.
+    // For our mock data setup, the new report will appear on the main reports page.
+  }
 
   return (
     <div className="flex flex-col gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-3xl">Patient: {patient.name}</CardTitle>
-          <CardDescription>
-            ID: {patient.id} | Age: {report?.patientInfo.age} | Gender: {report?.patientInfo.gender} | Device ID: {patient.deviceId || 'N/A'}
-          </CardDescription>
+       <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-3xl">Patient: {patient.name}</CardTitle>
+              <CardDescription>
+                ID: {patient.id} | Age: {latestReport?.patientInfo.age} | Gender: {latestReport?.patientInfo.gender} | Device ID: {patient.deviceId || 'N/A'}
+              </CardDescription>
+            </div>
+             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Create New Report
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-4xl">
+                 <DialogHeader>
+                  <DialogTitle>Create New Report for {patient.name}</DialogTitle>
+                </DialogHeader>
+                <CreateReportForm patient={patient} onFormSubmit={handleDialogClose} />
+              </DialogContent>
+            </Dialog>
         </CardHeader>
       </Card>
       
@@ -64,17 +92,17 @@ export default function PatientDetailPage() {
                 <PatientVitalsChart />
             </CardContent>
         </Card>
-        {report ? (
+        {latestReport ? (
              <Card>
                 <CardHeader>
-                    <CardTitle>Patient History</CardTitle>
-                    <CardDescription>From report dated {report.patientInfo.visitDate}.</CardDescription>
+                    <CardTitle>Latest Patient History</CardTitle>
+                    <CardDescription>From report dated {latestReport.patientInfo.visitDate}. View all reports on the main Reports page.</CardDescription>
                 </CardHeader>
                 <CardContent className="prose prose-sm max-w-none text-sm">
-                    <p><strong>Presenting Complaint:</strong> {report.medicalHistory.complaint}</p>
-                    <p><strong>History of Present Illness:</strong> {report.medicalHistory.hpi}</p>
-                    <p><strong>Past Medical History:</strong> {report.medicalHistory.pastMedicalHistory}</p>
-                    <p><strong>Diagnosis:</strong> {report.investigations.diagnosis}</p>
+                    <p><strong>Presenting Complaint:</strong> {latestReport.medicalHistory.complaint}</p>
+                    <p><strong>History of Present Illness:</strong> {latestReport.medicalHistory.hpi}</p>
+                    <p><strong>Past Medical History:</strong> {latestReport.medicalHistory.pastMedicalHistory}</p>
+                    <p><strong>Diagnosis:</strong> {latestReport.investigations.diagnosis}</p>
                 </CardContent>
             </Card>
         ) : (
