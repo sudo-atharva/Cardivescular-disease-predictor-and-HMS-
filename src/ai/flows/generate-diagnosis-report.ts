@@ -8,8 +8,9 @@
  * - GenerateDiagnosisReportOutput - The return type for the generateDiagnosisReport function.
  */
 
-import {ai} from '@/ai/genkit';
+import {ai, getModel} from '@/ai/genkit';
 import {z} from 'genkit';
+import { generateMockDiagnosisReport, isMockMode } from '@/lib/mock-ai';
 
 const GenerateDiagnosisReportInputSchema = z.object({
   vitalsData: z.string().describe('A JSON string containing an array of vital signs readings. Each reading should include ts, id, ppg, ecg, hr, spo2, and ptt.'),
@@ -23,6 +24,11 @@ const GenerateDiagnosisReportOutputSchema = z.object({
 export type GenerateDiagnosisReportOutput = z.infer<typeof GenerateDiagnosisReportOutputSchema>;
 
 export async function generateDiagnosisReport(input: GenerateDiagnosisReportInput): Promise<GenerateDiagnosisReportOutput> {
+  // Check if we should use mock mode
+  if (isMockMode()) {
+    return generateMockDiagnosisReport(input);
+  }
+  
   return generateDiagnosisReportFlow(input);
 }
 
@@ -30,6 +36,7 @@ const prompt = ai.definePrompt({
   name: 'generateDiagnosisReportPrompt',
   input: {schema: GenerateDiagnosisReportInputSchema},
   output: {schema: GenerateDiagnosisReportOutputSchema},
+  model: getModel(),
   prompt: `You are an AI assistant specialized in predicting potential diseases for doctors based on vital signs data and the patient's medical history.
 
   Based on the following information, generate a concise disease prediction report. Analyze the provided JSON data for trends, anomalies, or critical values. Correlate these findings with the patient's full medical history.

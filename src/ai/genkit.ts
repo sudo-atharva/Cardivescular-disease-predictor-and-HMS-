@@ -1,17 +1,19 @@
 import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
-import { ollama } from 'genkit/plugins/ollama';
+import { ollama } from 'genkitx-ollama';
+import { getCurrentModel } from '@/lib/ai-config';
 
 export const ai = genkit({
   plugins: [
     googleAI(),
     ollama(),
   ],
-  flow: {
-    maxRetries: 3,
-  },
 });
 
-export const model = process.env.AI_MODEL === 'ollama'
-  ? 'ollama/llama3'
-  : 'googleai/gemini-2.0-flash';
+// Function to get the appropriate model based on environment configuration
+export function getModel() {
+  return getCurrentModel();
+}
+
+// Default model for backward compatibility
+export const model = getModel();

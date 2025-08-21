@@ -59,14 +59,50 @@ sudo systemctl status mongodb
 - Create a cluster and get your connection string
 - Update the `.env.local` file with your connection string
 
+### 3.1 Set Up Ollama (Optional - for offline AI)
+If you want to use offline AI capabilities:
+
+```bash
+# Install Ollama (Arch Linux)
+curl -fsSL https://ollama.ai/install.sh | sh
+
+# Start Ollama service
+ollama serve
+
+# In another terminal, pull a model
+ollama pull llama3.2
+
+# Verify Ollama is running
+curl http://localhost:11434/api/tags
+```
+
 ### 4. Environment Configuration
 Create a `.env.local` file in the root directory:
+
+#### For Google AI (Online):
 ```env
 MONGODB_URI=mongodb://localhost:27017/mern-predictor-ai
 NODE_ENV=development
 NEXTAUTH_SECRET=your-secret-key-here-change-in-production
 NEXTAUTH_URL=http://localhost:9002
+
+# AI Configuration
+AI_PROVIDER=googleai
 GOOGLE_AI_API_KEY=your-google-ai-api-key-here
+GOOGLE_AI_MODEL=gemini-2.0-flash
+```
+
+#### For Ollama (Offline):
+```env
+MONGODB_URI=mongodb://localhost:27017/mern-predictor-ai
+NODE_ENV=development
+NEXTAUTH_SECRET=your-secret-key-here-change-in-production
+NEXTAUTH_URL=http://localhost:9002
+
+# AI Configuration
+AI_PROVIDER=ollama
+OLLAMA_MODEL=llama3.2
+OLLAMA_HOST=http://localhost:11434
 ```
 
 ### 5. Seed the Database
@@ -122,6 +158,12 @@ The application will be available at `http://localhost:9002`
 - `GET /api/test` - Test MongoDB connection
 - `GET /api/debug` - View all users in database
 
+### AI Configuration
+- `GET /api/ai/config` - Get current AI provider configuration
+- `POST /api/ai/config` - Update AI provider (requires .env.local update)
+- `GET /api/ai/test` - Test AI integration (includes mock mode)
+- `POST /api/ai/diagnosis` - Generate diagnosis report using AI or mock mode
+
 ## Project Structure
 
 ```
@@ -142,6 +184,41 @@ src/
 │   ├── models.ts          # Data models
 │   └── utils.ts           # Helper functions
 └── hooks/                  # Custom React hooks
+```
+
+## AI Providers
+
+The application supports two AI providers for generating medical diagnosis reports:
+
+### Google AI (Online)
+- **Provider**: Google's Gemini models via API
+- **Setup**: Requires `GOOGLE_AI_API_KEY` environment variable
+- **Models**: gemini-2.0-flash, gemini-1.5-pro, etc.
+- **Use Case**: Production environments with internet access
+
+### Ollama (Offline)
+- **Provider**: Local LLM models via Ollama
+- **Setup**: Requires Ollama installed and running locally
+- **Models**: llama3.2, codellama, mistral, etc.
+- **Use Case**: Development, offline environments, privacy-focused deployments
+
+### Mock Mode (Default)
+When no external AI services are configured, the application automatically runs in **mock mode**:
+- Provides realistic sample AI responses for demonstration
+- No API keys or external services required
+- Perfect for development and testing
+- Automatically switches to real AI when services are configured
+
+### Switching AI Providers
+To switch between providers, update your `.env.local` file:
+```bash
+# For Google AI
+AI_PROVIDER=googleai
+GOOGLE_AI_API_KEY=your-api-key
+
+# For Ollama
+AI_PROVIDER=ollama
+OLLAMA_MODEL=llama3.2
 ```
 
 ## Key Components
