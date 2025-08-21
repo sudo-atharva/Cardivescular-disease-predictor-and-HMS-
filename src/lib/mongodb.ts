@@ -7,6 +7,7 @@ if (!process.env.MONGODB_URI) {
 
 const uri = process.env.MONGODB_URI
 const options = {}
+const dbName = process.env.MONGODB_URI.split('/').pop()?.split('?')[0] || 'mern-predictor-ai'
 
 let client
 let clientPromise: Promise<MongoClient>
@@ -32,3 +33,9 @@ if (process.env.NODE_ENV === 'development') {
 // Export a module-scoped MongoClient promise. By doing this in a
 // separate module, the client can be shared across functions.
 export default clientPromise
+
+// Helper function to get database instance
+export async function getDb() {
+  const client = await clientPromise
+  return client.db(dbName)
+}

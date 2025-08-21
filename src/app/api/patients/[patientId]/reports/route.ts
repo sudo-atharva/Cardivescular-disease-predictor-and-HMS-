@@ -1,6 +1,6 @@
 
 import {NextRequest, NextResponse} from 'next/server';
-import clientPromise from '@/lib/mongodb';
+import { getDb } from '@/lib/mongodb';
 import {Report} from '@/lib/models';
 import {ObjectId} from 'mongodb';
 
@@ -9,8 +9,7 @@ export async function GET(
   {params}: {params: {patientId: string}}
 ) {
   try {
-    const client = await clientPromise;
-    const db = client.db();
+    const db = await getDb();
     const reports = await db
       .collection<Report>('reports')
       .find({patientId: params.patientId})

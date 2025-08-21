@@ -1,12 +1,11 @@
 
 import {NextRequest, NextResponse} from 'next/server';
-import clientPromise from '@/lib/mongodb';
+import { getDb } from '@/lib/mongodb';
 import {User} from '@/lib/models';
 
 export async function GET(request: NextRequest) {
   try {
-    const client = await clientPromise;
-    const db = client.db();
+    const db = await getDb();
     const patients = await db
       .collection<User>('users')
       .find({role: 'patient'})
@@ -23,8 +22,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const client = await clientPromise;
-    const db = client.db();
+    const db = await getDb();
     const patientData = await request.json();
 
     // Basic validation
