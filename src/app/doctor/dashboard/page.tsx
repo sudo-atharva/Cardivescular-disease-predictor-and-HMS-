@@ -13,12 +13,22 @@ import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescript
 import { cn } from '@/lib/utils';
 import type { User } from '@/lib/models';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { useSettings } from '@/lib/settings';
+import { vitalsSocket } from '@/lib/websocket';
+import { useToast } from '@/components/ui/use-toast';
+import { Save } from 'lucide-react';
 
 
 export default function DoctorDashboard() {
   const [patients, setPatients] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAlert, setShowAlert] = useState(false);
+  const { esp32IpAddress, setEsp32IpAddress } = useSettings();
+  const [esp32Ip, setEsp32Ip] = useState(esp32IpAddress);
+  const [isConnected, setIsConnected] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchPatients = async () => {
@@ -38,6 +48,32 @@ export default function DoctorDashboard() {
     };
     fetchPatients();
   }, []);
+
+  // Monitor WebSocket connection status and handle events
+  useEffect(() => {
+    const update = () => setIsConnected(vitalsSocket.isDeviceConnected());
+    update();
+    const interval = setInterval(update, 1000);
+    vitalsSocket.setHandlers({
+      onConnect: () => setIsConnected(true),
+      onDisconnect: () => setIsConnected(false),
+    });
+    return () => {
+      clearInterval(interval);
+      vitalsSocket.setHandlers({});
+    };
+  }, []);
+
+  const handleSaveEsp32Ip = () => {
+    const valid = /^(ws[s]?:\/\/)?([a-zA-Z0-9][-a-zA-Z0-9_.]*)(:[0-9]+)?(\/[\w-./]*)?$/.test(esp32Ip);
+    if (!valid) {
+      toast({ title: 'Invalid IP Address', description: 'Enter a valid host:port or ws(s):// URL (optionally with path).', variant: 'destructive' });
+      return;
+    }
+    setEsp32IpAddress(esp32Ip);
+    vitalsSocket.reconnect();
+    toast({ title: 'Settings Saved', description: 'ESP32 connection settings updated.' });
+  };
 
   const livePatients = patients.filter(p => p.isLive);
   const highRiskPatients = patients.filter(p => p.status === 'Unstable' || p.risk === 'High');
@@ -88,6 +124,38 @@ export default function DoctorDashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ESP32 Device Configuration */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Device Configuration</CardTitle>
+          <CardDescription>Configure the ESP32 WebSocket endpoint for live ECG/PPG streaming.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Label htmlFor="esp32-ip">ESP32 IP/URL</Label>
+            <div className="flex gap-2">
+              <Input
+                id="esp32-ip"
+                value={esp32Ip}
+                onChange={(e) => setEsp32Ip(e.target.value)}
+                placeholder="192.168.1.100:81 or ws://192.168.1.100:81/ws"
+              />
+              <Button type="button" onClick={handleSaveEsp32Ip}>
+                <Save className="mr-2 h-4 w-4" />
+                Save
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">
+              Status: {isConnected ? (
+                <span className="text-green-500">Connected</span>
+              ) : (
+                <span className="text-red-500">Disconnected</span>
+              )}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {stats.map(stat => (

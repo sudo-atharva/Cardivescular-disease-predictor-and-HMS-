@@ -1,7 +1,16 @@
 import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
 import { ollama } from 'genkitx-ollama';
-import { getCurrentModel } from '@/lib/ai-config';
+import { getCurrentModel, getAIConfig } from '@/lib/ai-config';
+
+const cfg = getAIConfig();
+const googleKey = process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_AI_API_KEY;
+if (googleKey && !process.env.GOOGLE_GENAI_API_KEY) {
+  process.env.GOOGLE_GENAI_API_KEY = googleKey;
+}
+if (!process.env.OLLAMA_HOST && cfg.ollama.host) {
+  process.env.OLLAMA_HOST = cfg.ollama.host;
+}
 
 export const ai = genkit({
   plugins: [

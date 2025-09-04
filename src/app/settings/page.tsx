@@ -8,8 +8,54 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Save } from 'lucide-react';
 
+import { useToast } from '@/components/ui/use-toast';
+import { useSettings } from '@/lib/settings';
+import { vitalsSocket } from '@/lib/websocket';
+
 export default function SettingsPage() {
+  const { toast } = useToast();
   const [userType, setUserType] = useState<'doctor' | 'patient' | null>(null);
+  const { esp32IpAddress, setEsp32IpAddress } = useSettings();
+  const [esp32Ip, setEsp32Ip] = useState(esp32IpAddress);
+  const [isConnected, setIsConnected] = useState(false);
+
+  useEffect(() => {
+    // Update connection status periodically and handle connection
+    const updateConnectionStatus = () => {
+      const connected = vitalsSocket.isDeviceConnected();
+      setIsConnected(connected);
+    };
+
+    // Update immediately
+    updateConnectionStatus();
+
+    // Set up periodic check
+    const interval = setInterval(updateConnectionStatus, 1000);
+
+    // Set up WebSocket event handlers
+    vitalsSocket.setHandlers({
+      onConnect: () => {
+        setIsConnected(true);
+        toast({
+          title: "Connected",
+          description: "Successfully connected to ESP32 device.",
+        });
+      },
+      onDisconnect: () => {
+        setIsConnected(false);
+        toast({
+          title: "Disconnected",
+          description: "Lost connection to ESP32 device.",
+          variant: "destructive",
+        });
+      }
+    });
+
+    return () => {
+      clearInterval(interval);
+      vitalsSocket.setHandlers({});
+    };
+  }, [toast]);
 
   useEffect(() => {
     // In a real app, this would come from a session or context provider.
@@ -20,9 +66,54 @@ export default function SettingsPage() {
     }
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle saving settings
+    
+    // Validate IP/URL format: allow host:port, ws://host:port[/path], wss://...
+    const isValidIp = /^(ws[s]?:\/\/)?([a-zA-Z0-9][-a-zA-Z0-9_.]*)(:[0-9]+)?(\/[\w-./]*)?$/.test(esp32Ip);
+    
+    if (!isValidIp) {
+      toast({
+        title: "Invalid IP Address",
+        description: "Please enter a valid IP address or hostname (e.g., 192.168.1.100:81 or localhost:81)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Update the settings
+      setEsp32IpAddress(esp32Ip);
+      
+      // Attempt to reconnect the WebSocket with new IP
+      vitalsSocket.reconnect();
+
+      // Start checking connection status
+      let connectionTimeout = setTimeout(() => {
+        if (!vitalsSocket.isDeviceConnected()) {
+          toast({
+            title: "Connection Warning",
+            description: "Could not connect to ESP32. Please check if the device is online and the IP is correct.",
+            variant: "default",
+          });
+        }
+      }, 3000);
+
+      // Clean up the timeout
+      setTimeout(() => clearTimeout(connectionTimeout), 3100);
+
+      toast({
+        title: "Settings Saved",
+        description: "ESP32 connection settings have been updated.",
+      });
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save settings. Please check the console for details.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -44,8 +135,21 @@ export default function SettingsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    <Label htmlFor="esp32-ip">ESP32 Static IP Address</Label>
-                    <Input id="esp32-ip" type="text" placeholder="e.g., 192.168.1.100" />
+                    <Label htmlFor="esp32-ip">ESP32 IP Address and Port</Label>
+                    <Input
+                      id="esp32-ip"
+                      type="text"
+                      value={esp32Ip}
+                      onChange={(e) => setEsp32Ip(e.target.value)}
+                      placeholder="e.g., 192.168.1.100:81"
+                    />
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Current connection status: {isConnected ? (
+                        <span className="text-green-500">Connected</span>
+                      ) : (
+                        <span className="text-red-500">Disconnected</span>
+                      )}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
