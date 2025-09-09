@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 Debug Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .connected { background-color: #d4edda; color: #155724; }
+        .disconnected { background-color: #f8d7da; color: #721c24; }
+        .connecting { background-color: #fff3cd; color: #856404; }
+        
+        input, button {
+            padding: 8px 12px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #6c757d; cursor: not-allowed; }
+        
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .data-box {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .data-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .data-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .error { color: #dc3545; }
+        .success { color: #28a745; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ESP32 Debug Test</h1>
+        
+        <div>
+            <label for="esp32-ip">ESP32 IP Address:</label>
+            <input type="text" id="esp32-ip" value="192.168.1.50" placeholder="192.168.1.50">
+            <button id="test-http" onclick="testHTTP()">Test HTTP</button>
+            <button id="connect-ws" onclick="connectWS()">Connect WebSocket</button>
+            <button id="disconnect-ws" onclick="disconnectWS()" disabled>Disconnect</button>
+        </div>
+        
+        <div id="status" class="status disconnected">Ready for testing</div>
+        
+        <div class="data-grid">
+            <div class="data-box">
+                <div class="data-label">Connection Status</div>
+                <div class="data-value" id="conn-status">Disconnected</div>
+            </div>
+            <div class="data-box">
+                <div class="data-label">Messages Received</div>
+                <div class="data-value" id="msg-count">0</div>
+            </div>
+            <div class="data-box">
+                <div class="data-label">Heart Rate</div>
+                <div class="data-value" id="hr-display">--</div>
+            </div>
+            <div class="data-box">
+                <div class="data-label">SpO2</div>
+                <div class="data-value" id="spo2-display">-- %</div>
+            </div>
+            <div class="data-box">
+                <div class="data-label">ECG Raw</div>
+                <div class="data-value" id="ecg-raw">--</div>
+            </div>
+            <div class="data-box">
+                <div class="data-label">ECG Processed</div>
+                <div class="data-value" id="ecg-proc">--</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h3>Debug Log</h3>
+        <div id="log" class="log">Debug log will appear here...\n</div>
+        <button onclick="clearLog()">Clear Log</button>
+        <button onclick="sendTestMsg()">Send Test Message</button>
+    </div>
+
+    <script>
+        let ws = null;
+        let messageCount = 0;
+        
+        function log(message, type = 'info') {
+            const logElement = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
+            logElement.textContent += `[${timestamp}] ${prefix} ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function updateStatus(status, className) {
+            const statusElement = document.getElementById('status');
+            statusElement.textContent = status;
+            statusElement.className = `status ${className}`;
+            
+            document.getElementById('conn-status').textContent = status;
+        }
+        
+        async function testHTTP() {
+            const ip = document.getElementById('esp32-ip').value.trim();
+            if (!ip) {
+                alert('Please enter ESP32 IP address');
+                return;
+            }
+            
+            const httpUrl = `http://${ip}`;
+            log(`Testing HTTP connection to: ${httpUrl}`);
+            updateStatus('Testing HTTP...', 'connecting');
+            
+            try {
+                const response = await fetch(httpUrl, { timeout: 5000 });
+                const text = await response.text();
+                log(`HTTP Response received (${response.status}): ${text.substring(0, 100)}...`, 'success');
+                updateStatus('HTTP Test Successful', 'connected');
+                
+                // Also test the /test endpoint
+                const testResponse = await fetch(`${httpUrl}/test`);
+                const testText = await testResponse.text();
+                log(`Test endpoint response: ${testText}`, 'success');
+                
+            } catch (error) {
+                log(`HTTP connection failed: ${error.message}`, 'error');
+                updateStatus('HTTP Test Failed', 'disconnected');
+                
+                // Additional troubleshooting info
+                log('Troubleshooting steps:', 'info');
+                log('1. Check if ESP32 is powered on and connected to WiFi', 'info');
+                log('2. Verify the IP address is correct', 'info');
+                log('3. Make sure you\'re on the same network as the ESP32', 'info');
+                log('4. Try pinging the ESP32 from command line', 'info');
+            }
+        }
+        
+        function connectWS() {
+            const ip = document.getElementById('esp32-ip').value.trim();
+            if (!ip) {
+                alert('Please enter ESP32 IP address');
+                return;
+            }
+            
+            const wsUrl = `ws://${ip}/`;
+            log(`Attempting WebSocket connection to: ${wsUrl}`);
+            updateStatus('Connecting WebSocket...', 'connecting');
+            
+            try {
+                ws = new WebSocket(wsUrl);
+                
+                ws.onopen = function(event) {
+                    log('WebSocket connection established', 'success');
+                    updateStatus('WebSocket Connected', 'connected');
+                    document.getElementById('connect-ws').disabled = true;
+                    document.getElementById('disconnect-ws').disabled = false;
+                };
+                
+                ws.onmessage = function(event) {
+                    messageCount++;
+                    document.getElementById('msg-count').textContent = messageCount;
+                    
+                    log(`Message ${messageCount}: ${event.data.substring(0, 200)}${event.data.length > 200 ? '...' : ''}`);
+                    
+                    try {
+                        const data = JSON.parse(event.data);
+                        updateDisplay(data);
+                    } catch (e) {
+                        log(`Failed to parse JSON: ${e.message}`, 'error');
+                    }
+                };
+                
+                ws.onclose = function(event) {
+                    log(`WebSocket closed: Code ${event.code} - ${event.reason || 'No reason provided'}`, 'error');
+                    updateStatus('WebSocket Disconnected', 'disconnected');
+                    document.getElementById('connect-ws').disabled = false;
+                    document.getElementById('disconnect-ws').disabled = true;
+                    ws = null;
+                };
+                
+                ws.onerror = function(event) {
+                    log(`WebSocket error occurred`, 'error');
+                    updateStatus('WebSocket Error', 'disconnected');
+                };
+                
+            } catch (error) {
+                log(`WebSocket connection error: ${error.message}`, 'error');
+                updateStatus('WebSocket Connection Failed', 'disconnected');
+            }
+        }
+        
+        function disconnectWS() {
+            if (ws) {
+                ws.close(1000, 'User requested disconnect');
+                log('Disconnecting WebSocket...');
+            }
+        }
+        
+        function updateDisplay(data) {
+            if (data.hr !== undefined) {
+                document.getElementById('hr-display').textContent = data.hr > 0 ? data.hr : '--';
+            }
+            
+            if (data.spo2 !== undefined) {
+                document.getElementById('spo2-display').textContent = data.spo2 > 0 ? `${data.spo2} %` : '-- %';
+            }
+            
+            if (data.raw_ecg !== undefined) {
+                document.getElementById('ecg-raw').textContent = data.raw_ecg;
+            }
+            
+            if (data.ecg !== undefined) {
+                document.getElementById('ecg-proc').textContent = data.ecg.toFixed(3);
+            }
+            
+            // Log important status changes
+            if (data.leadsOff !== undefined && data.leadsOff) {
+                log('⚠️ ECG leads are disconnected', 'error');
+            }
+            
+            if (data.free_heap !== undefined && data.free_heap < 10000) {
+                log(`⚠️ Low memory warning: ${data.free_heap} bytes`, 'error');
+            }
+        }
+        
+        function clearLog() {
+            document.getElementById('log').textContent = 'Debug log cleared...\n';
+            messageCount = 0;
+            document.getElementById('msg-count').textContent = '0';
+        }
+        
+        function sendTestMsg() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const testMsg = JSON.stringify({
+                    type: 'test',
+                    message: 'Hello from web client',
+                    timestamp: Date.now()
+                });
+                ws.send(testMsg);
+                log(`Sent test message: ${testMsg}`);
+            } else {
+                alert('WebSocket is not connected');
+            }
+        }
+        
+        // Initialize
+        log('Debug page loaded - ready for testing');
+        updateStatus('Ready for testing', 'disconnected');
+    </script>
+</body>
+</html>

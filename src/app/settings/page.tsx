@@ -10,7 +10,7 @@ import { Save } from 'lucide-react';
 
 import { useToast } from '@/components/ui/use-toast';
 import { useSettings } from '@/lib/settings';
-import { vitalsSocket } from '@/lib/websocket';
+import { httpVitalsClient } from '@/lib/http-vitals';
 
 export default function SettingsPage() {
   const { toast } = useToast();
@@ -22,7 +22,7 @@ export default function SettingsPage() {
   useEffect(() => {
     // Update connection status periodically and handle connection
     const updateConnectionStatus = () => {
-      const connected = vitalsSocket.isDeviceConnected();
+      const connected = httpVitalsClient.isDeviceConnected();
       setIsConnected(connected);
     };
 
@@ -32,13 +32,13 @@ export default function SettingsPage() {
     // Set up periodic check
     const interval = setInterval(updateConnectionStatus, 1000);
 
-    // Set up WebSocket event handlers
-    vitalsSocket.setHandlers({
+    // Set up HTTP client event handlers
+    httpVitalsClient.setHandlers({
       onConnect: () => {
         setIsConnected(true);
         toast({
           title: "Connected",
-          description: "Successfully connected to ESP32 device.",
+          description: "Successfully connected to ESP32 device via HTTP.",
         });
       },
       onDisconnect: () => {
@@ -48,12 +48,15 @@ export default function SettingsPage() {
           description: "Lost connection to ESP32 device.",
           variant: "destructive",
         });
+      },
+      onError: (error) => {
+        console.error('HTTP vitals error:', error);
       }
     });
 
     return () => {
       clearInterval(interval);
-      vitalsSocket.setHandlers({});
+      httpVitalsClient.setHandlers({});
     };
   }, [toast]);
 
@@ -69,13 +72,13 @@ export default function SettingsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate IP/URL format: allow host:port, ws://host:port[/path], wss://...
-    const isValidIp = /^(ws[s]?:\/\/)?([a-zA-Z0-9][-a-zA-Z0-9_.]*)(:[0-9]+)?(\/[\w-./]*)?$/.test(esp32Ip);
+    // Validate IP/URL format: allow host:port, http://host:port, etc.
+    const isValidIp = /^(https?:\/\/)?([a-zA-Z0-9][-a-zA-Z0-9_.]*)(:[0-9]+)?$/.test(esp32Ip);
     
     if (!isValidIp) {
       toast({
         title: "Invalid IP Address",
-        description: "Please enter a valid IP address or hostname (e.g., 192.168.1.100:81 or localhost:81)",
+        description: "Please enter a valid IP address or hostname (e.g., 192.168.1.100 or localhost)",
         variant: "destructive",
       });
       return;
@@ -85,27 +88,31 @@ export default function SettingsPage() {
       // Update the settings
       setEsp32IpAddress(esp32Ip);
       
-      // Attempt to reconnect the WebSocket with new IP
-      vitalsSocket.reconnect();
-
-      // Start checking connection status
-      let connectionTimeout = setTimeout(() => {
-        if (!vitalsSocket.isDeviceConnected()) {
-          toast({
-            title: "Connection Warning",
-            description: "Could not connect to ESP32. Please check if the device is online and the IP is correct.",
-            variant: "default",
-          });
-        }
-      }, 3000);
-
-      // Clean up the timeout
-      setTimeout(() => clearTimeout(connectionTimeout), 3100);
-
-      toast({
-        title: "Settings Saved",
-        description: "ESP32 connection settings have been updated.",
-      });
+      // Update the HTTP client base URL
+      let baseUrl = esp32Ip;
+      if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+        baseUrl = `http://${baseUrl}`;
+      }
+      httpVitalsClient.setBaseUrl(baseUrl);
+      
+      // Test the connection
+      const connectionTest = await httpVitalsClient.testConnection();
+      
+      if (connectionTest) {
+        // Restart polling with new settings
+        httpVitalsClient.reconnect();
+        
+        toast({
+          title: "Settings Saved",
+          description: "ESP32 connection settings updated and connection successful.",
+        });
+      } else {
+        toast({
+          title: "Settings Saved",
+          description: "Settings saved but could not connect to ESP32. Please check if the device is online.",
+          variant: "default",
+        });
+      }
     } catch (error) {
       console.error('Error saving settings:', error);
       toast({
@@ -141,7 +148,7 @@ export default function SettingsPage() {
                       type="text"
                       value={esp32Ip}
                       onChange={(e) => setEsp32Ip(e.target.value)}
-                      placeholder="e.g., 192.168.1.100:81"
+                      placeholder="e.g., 192.168.1.100 or 192.168.1.50:80"
                     />
                     <p className="text-sm text-muted-foreground mt-1">
                       Current connection status: {isConnected ? (

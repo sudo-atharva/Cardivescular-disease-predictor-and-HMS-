@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 Connection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .input-group {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .data-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .chart-container {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .live-data {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .data-card {
+            background: white;
+            padding: 15px;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .data-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .data-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ESP32 Vitals Monitor - Connection Test</h1>
+        
+        <div class="input-group">
+            <label for="ipAddress">ESP32 IP Address:</label>
+            <input type="text" id="ipAddress" value="192.168.1.50" placeholder="Enter ESP32 IP address">
+            <small>Check your ESP32 Serial Monitor for the actual IP address</small>
+        </div>
+        
+        <div>
+            <button onclick="testConnection()">Test Connection</button>
+            <button onclick="getVitals()">Get Vitals Data</button>
+            <button onclick="startLiveData()" id="liveBtn">Start Live Data</button>
+            <button onclick="stopLiveData()" id="stopBtn" disabled>Stop Live Data</button>
+        </div>
+        
+        <div id="status"></div>
+        
+        <div class="live-data" id="liveData" style="display: none;">
+            <div class="data-card">
+                <div class="data-value" id="heartRate">--</div>
+                <div class="data-label">Heart Rate (BPM)</div>
+            </div>
+            <div class="data-card">
+                <div class="data-value" id="spo2">--</div>
+                <div class="data-label">SpO2 (%)</div>
+            </div>
+            <div class="data-card">
+                <div class="data-value" id="ecg">--</div>
+                <div class="data-label">ECG (mV)</div>
+            </div>
+            <div class="data-card">
+                <div class="data-value" id="timestamp">--</div>
+                <div class="data-label">Last Update</div>
+            </div>
+        </div>
+        
+        <div id="dataDisplay"></div>
+        
+        <div class="chart-container" id="chartContainer" style="display: none;">
+            <h3>Live Data Chart</h3>
+            <canvas id="vitalsChart" width="600" height="300"></canvas>
+        </div>
+    </div>
+
+    <script>
+        let liveDataInterval = null;
+        let chartData = {
+            heartRate: [],
+            spo2: [],
+            ecg: [],
+            timestamps: []
+        };
+        let chart = null;
+
+        function getBaseUrl() {
+            const ip = document.getElementById('ipAddress').value.trim();
+            return ip.startsWith('http') ? ip : `http://${ip}`;
+        }
+
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${type}`;
+            statusDiv.innerHTML = message;
+        }
+
+        function showData(data) {
+            const dataDiv = document.getElementById('dataDisplay');
+            dataDiv.className = 'data-display';
+            dataDiv.textContent = JSON.stringify(data, null, 2);
+        }
+
+        async function testConnection() {
+            showStatus('Testing connection...', 'info');
+            
+            try {
+                const response = await fetch(`${getBaseUrl()}/test`, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' },
+                    signal: AbortSignal.timeout(5000)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                showStatus(`✅ Connection successful! ESP32 is responding.`, 'success');
+                showData(data);
+                
+            } catch (error) {
+                showStatus(`❌ Connection failed: ${error.message}`, 'error');
+                console.error('Connection test failed:', error);
+            }
+        }
+
+        async function getVitals() {
+            showStatus('Getting vitals data...', 'info');
+            
+            try {
+                const response = await fetch(`${getBaseUrl()}/vitals`, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' },
+                    signal: AbortSignal.timeout(5000)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                showStatus(`✅ Vitals data received!`, 'success');
+                showData(data);
+                updateLiveDisplay(data);
+                
+            } catch (error) {
+                showStatus(`❌ Failed to get vitals: ${error.message}`, 'error');
+                console.error('Get vitals failed:', error);
+            }
+        }
+
+        function updateLiveDisplay(data) {
+            document.getElementById('heartRate').textContent = Math.round(data.heartRate || 0);
+            document.getElementById('spo2').textContent = Math.round(data.spo2 || 0);
+            document.getElementById('ecg').textContent = (data.ecg || 0).toFixed(3);
+            document.getElementById('timestamp').textContent = new Date(data.timestamp).toLocaleTimeString();
+            
+            // Update chart data
+            const now = new Date(data.timestamp);
+            chartData.heartRate.push(data.heartRate || 0);
+            chartData.spo2.push(data.spo2 || 0);
+            chartData.ecg.push((data.ecg || 0) * 1000); // Convert to mV
+            chartData.timestamps.push(now.toLocaleTimeString());
+            
+            // Keep only last 50 points
+            if (chartData.heartRate.length > 50) {
+                chartData.heartRate.shift();
+                chartData.spo2.shift();
+                chartData.ecg.shift();
+                chartData.timestamps.shift();
+            }
+            
+            updateChart();
+        }
+
+        function startLiveData() {
+            if (liveDataInterval) return;
+            
+            document.getElementById('liveBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('liveData').style.display = 'grid';
+            document.getElementById('chartContainer').style.display = 'block';
+            
+            showStatus('🔄 Starting live data stream...', 'info');
+            
+            liveDataInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`${getBaseUrl()}/vitals`, {
+                        method: 'GET',
+                        headers: { 'Accept': 'application/json' },
+                        signal: AbortSignal.timeout(3000)
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        updateLiveDisplay(data);
+                        showStatus('🟢 Live data streaming...', 'success');
+                    }
+                } catch (error) {
+                    console.error('Live data error:', error);
+                    showStatus(`🔴 Live data error: ${error.message}`, 'error');
+                }
+            }, 500); // Update every 500ms
+        }
+
+        function stopLiveData() {
+            if (liveDataInterval) {
+                clearInterval(liveDataInterval);
+                liveDataInterval = null;
+            }
+            
+            document.getElementById('liveBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            showStatus('⏹️ Live data stopped', 'info');
+        }
+
+        function updateChart() {
+            const canvas = document.getElementById('vitalsChart');
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (chartData.heartRate.length === 0) return;
+            
+            // Draw grid
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 10; i++) {
+                const y = (canvas.height / 10) * i;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            
+            // Draw heart rate (red)
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < chartData.heartRate.length; i++) {
+                const x = (canvas.width / (chartData.heartRate.length - 1)) * i;
+                const y = canvas.height - ((chartData.heartRate[i] / 150) * canvas.height);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            
+            // Draw SpO2 (blue)
+            ctx.strokeStyle = '#0000ff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < chartData.spo2.length; i++) {
+                const x = (canvas.width / (chartData.spo2.length - 1)) * i;
+                const y = canvas.height - (((chartData.spo2[i] - 80) / 20) * canvas.height);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            
+            // Draw ECG (green)
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < chartData.ecg.length; i++) {
+                const x = (canvas.width / (chartData.ecg.length - 1)) * i;
+                const y = (canvas.height / 2) + (chartData.ecg[i] * 50); // Scale ECG
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            
+            // Draw legend
+            ctx.fillStyle = '#000';
+            ctx.font = '12px Arial';
+            ctx.fillText('Red: Heart Rate (0-150 BPM)', 10, 20);
+            ctx.fillText('Blue: SpO2 (80-100%)', 10, 35);
+            ctx.fillText('Green: ECG (mV)', 10, 50);
+        }
+
+        // Initialize chart canvas
+        window.onload = function() {
+            const canvas = document.getElementById('vitalsChart');
+            canvas.width = 600;
+            canvas.height = 300;
+        };
+    </script>
+</body>
+</html>

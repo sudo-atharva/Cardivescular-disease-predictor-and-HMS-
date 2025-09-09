@@ -8,7 +8,7 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
-import { vitalsSocket, type VitalReading } from '@/lib/websocket';
+import { httpVitalsClient, type VitalReading } from '@/lib/http-vitals';
 import { Badge } from '@/components/ui/badge';
 
 // Fallback data generator for when device is disconnected
@@ -29,9 +29,13 @@ const chartConfig = {
     label: 'ECG',
     color: 'hsl(var(--chart-1))',
   },
-  ppg: {
-    label: 'PPG',
+  spo2: {
+    label: 'SpO2',
     color: 'hsl(var(--chart-2))',
+  },
+  heartRate: {
+    label: 'Heart Rate',
+    color: 'hsl(var(--chart-3))',
   }
 } satisfies ChartConfig;
 
@@ -39,31 +43,42 @@ export default function PatientVitalsChart() {
     const [isClient, setIsClient] = React.useState(false);
     const [isConnected, setIsConnected] = React.useState(false);
     const [ecgData, setEcgData] = React.useState<VitalReading[]>([]);
-    const [ppgData, setPpgData] = React.useState<VitalReading[]>([]);
+    const [spo2Data, setSpo2Data] = React.useState<VitalReading[]>([]);
+    const [heartRateData, setHeartRateData] = React.useState<VitalReading[]>([]);
 
     React.useEffect(() => {
         setIsClient(true);
-        setIsConnected(vitalsSocket.isDeviceConnected());
+        setIsConnected(httpVitalsClient.isDeviceConnected());
 
-        // Set up WebSocket handlers
-        vitalsSocket.setHandlers({
-            onMessage: (data) => {
-                setEcgData(prev => [...prev.slice(-100), data]);
-                setPpgData(prev => [...prev.slice(-100), data]);
+        // Set up HTTP client handlers
+        httpVitalsClient.setHandlers({
+            onData: (readings) => {
+                // Add new readings to ECG, SpO2, and Heart Rate data
+                setEcgData(prev => [...prev.slice(-100), ...readings].slice(-100));
+                setSpo2Data(prev => [...prev.slice(-100), ...readings].slice(-100));
+                setHeartRateData(prev => [...prev.slice(-100), ...readings].slice(-100));
             },
             onConnect: () => setIsConnected(true),
-            onDisconnect: () => setIsConnected(false)
+            onDisconnect: () => setIsConnected(false),
+            onError: (error) => {
+                console.error('HTTP vitals error:', error);
+            }
         });
 
+        // Start polling for data
+        httpVitalsClient.startPolling();
+
         // Initial data
-        const lastReadings = vitalsSocket.getLastReadings();
+        const lastReadings = httpVitalsClient.getLastReadings();
         if (lastReadings.length > 0) {
-            setEcgData(lastReadings);
-            setPpgData(lastReadings);
+            setEcgData(lastReadings.slice(-100));
+            setSpo2Data(lastReadings.slice(-100));
+            setHeartRateData(lastReadings.slice(-100));
         }
 
         return () => {
-            vitalsSocket.setHandlers({});
+            httpVitalsClient.setHandlers({});
+            httpVitalsClient.stopPolling();
         };
     }, []);
 
@@ -75,13 +90,22 @@ export default function PatientVitalsChart() {
     const currentEcgData = ecgData.length > 0 ? ecgData : generateChartData(100, 1, 0.5).map(d => ({
         timestamp: Date.now() + d.time * 1000,
         ecg: d.value,
-        ppg: 0
+        spo2: 0,
+        heartRate: 0
     }));
 
-    const currentPpgData = ppgData.length > 0 ? ppgData : generateChartData(100, 1, 0.3).map(d => ({
+    const currentSpo2Data = spo2Data.length > 0 ? spo2Data : generateChartData(100, 95, 0.1).map(d => ({
         timestamp: Date.now() + d.time * 1000,
         ecg: 0,
-        ppg: d.value
+        spo2: Math.max(85, Math.min(100, 95 + d.value)),
+        heartRate: 0
+    }));
+
+    const currentHeartRateData = heartRateData.length > 0 ? heartRateData : generateChartData(100, 75, 0.2).map(d => ({
+        timestamp: Date.now() + d.time * 1000,
+        ecg: 0,
+        spo2: 0,
+        heartRate: Math.max(50, Math.min(120, 75 + d.value))
     }));
 
   return (
@@ -134,13 +158,13 @@ export default function PatientVitalsChart() {
         </ChartContainer>
       </div>
       <div>
-        <h3 className="text-lg font-semibold mb-2">PPG (Photoplethysmogram)</h3>
+        <h3 className="text-lg font-semibold mb-2">SpO2 (Blood Oxygen Saturation)</h3>
          <ChartContainer config={chartConfig} className="h-[250px] w-full">
-          <AreaChart data={currentPpgData} margin={{ left: -20, right: 10, top: 5, bottom: 5 }}>
+          <AreaChart data={currentSpo2Data} margin={{ left: -20, right: 10, top: 5, bottom: 5 }}>
             <defs>
-              <linearGradient id="fillPpg" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--color-ppg)" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="var(--color-ppg)" stopOpacity={0.1} />
+              <linearGradient id="fillSpo2" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="var(--color-spo2)" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="var(--color-spo2)" stopOpacity={0.1} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -155,7 +179,7 @@ export default function PatientVitalsChart() {
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
-                domain={[-3, 3]}
+                domain={[85, 100]}
                 unit="%"
             />
             <ChartTooltip 
@@ -164,10 +188,51 @@ export default function PatientVitalsChart() {
               labelFormatter={(value) => new Date(value).toLocaleTimeString()}
             />
             <Area
-              dataKey="ppg"
+              dataKey="spo2"
               type="natural"
-              fill="url(#fillPpg)"
-              stroke="var(--color-ppg)"
+              fill="url(#fillSpo2)"
+              stroke="var(--color-spo2)"
+              strokeWidth={2}
+              isAnimationActive={false}
+            />
+          </AreaChart>
+        </ChartContainer>
+      </div>
+      <div>
+        <h3 className="text-lg font-semibold mb-2">Heart Rate (BPM)</h3>
+         <ChartContainer config={chartConfig} className="h-[250px] w-full">
+          <AreaChart data={currentHeartRateData} margin={{ left: -20, right: 10, top: 5, bottom: 5 }}>
+            <defs>
+              <linearGradient id="fillHeartRate" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="var(--color-heartRate)" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="var(--color-heartRate)" stopOpacity={0.1} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+            <XAxis 
+              dataKey="timestamp" 
+              tickLine={false} 
+              axisLine={false} 
+              tickMargin={8}
+              tickFormatter={(value) => new Date(value).toLocaleTimeString()}
+            />
+            <YAxis
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                domain={[40, 150]}
+                unit=" BPM"
+            />
+            <ChartTooltip 
+              cursor={false} 
+              content={<ChartTooltipContent indicator="line" />}
+              labelFormatter={(value) => new Date(value).toLocaleTimeString()}
+            />
+            <Area
+              dataKey="heartRate"
+              type="natural"
+              fill="url(#fillHeartRate)"
+              stroke="var(--color-heartRate)"
               strokeWidth={2}
               isAnimationActive={false}
             />
