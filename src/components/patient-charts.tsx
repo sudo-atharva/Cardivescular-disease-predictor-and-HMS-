@@ -8,8 +8,9 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
-import { httpVitalsClient, type VitalReading } from '@/lib/http-vitals';
+import { type VitalReading } from '@/lib/http-vitals';
 import { Badge } from '@/components/ui/badge';
+import { useMonitoringState } from '@/lib/monitoring-state';
 
 // Fallback data generator for when device is disconnected
 const generateChartData = (points = 50, amplitude = 5, frequency = 0.2) => {
@@ -39,47 +40,23 @@ const chartConfig = {
   }
 } satisfies ChartConfig;
 
-export default function PatientVitalsChart() {
+interface PatientVitalsChartProps {
+    patientId: string;
+}
+
+export default function PatientVitalsChart({ patientId }: PatientVitalsChartProps) {
     const [isClient, setIsClient] = React.useState(false);
-    const [isConnected, setIsConnected] = React.useState(false);
-    const [ecgData, setEcgData] = React.useState<VitalReading[]>([]);
-    const [spo2Data, setSpo2Data] = React.useState<VitalReading[]>([]);
-    const [heartRateData, setHeartRateData] = React.useState<VitalReading[]>([]);
+    const { currentPatientId, getPatientReadings } = useMonitoringState();
+    const isMonitoring = currentPatientId === patientId;
+
+    // Get stored readings for this patient
+    const readings = getPatientReadings(patientId);
+    const ecgData = readings.slice(-100);
+    const spo2Data = readings.slice(-100);
+    const heartRateData = readings.slice(-100);
 
     React.useEffect(() => {
         setIsClient(true);
-        setIsConnected(httpVitalsClient.isDeviceConnected());
-
-        // Set up HTTP client handlers
-        httpVitalsClient.setHandlers({
-            onData: (readings) => {
-                // Add new readings to ECG, SpO2, and Heart Rate data
-                setEcgData(prev => [...prev.slice(-100), ...readings].slice(-100));
-                setSpo2Data(prev => [...prev.slice(-100), ...readings].slice(-100));
-                setHeartRateData(prev => [...prev.slice(-100), ...readings].slice(-100));
-            },
-            onConnect: () => setIsConnected(true),
-            onDisconnect: () => setIsConnected(false),
-            onError: (error) => {
-                console.error('HTTP vitals error:', error);
-            }
-        });
-
-        // Start polling for data
-        httpVitalsClient.startPolling();
-
-        // Initial data
-        const lastReadings = httpVitalsClient.getLastReadings();
-        if (lastReadings.length > 0) {
-            setEcgData(lastReadings.slice(-100));
-            setSpo2Data(lastReadings.slice(-100));
-            setHeartRateData(lastReadings.slice(-100));
-        }
-
-        return () => {
-            httpVitalsClient.setHandlers({});
-            httpVitalsClient.stopPolling();
-        };
     }, []);
 
     if (!isClient) {
@@ -112,8 +89,8 @@ export default function PatientVitalsChart() {
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl font-bold">Vital Signs Monitor</h2>
-        <Badge variant={isConnected ? "default" : "secondary"}>
-          {isConnected ? "Live Data" : "Historical Data"}
+        <Badge variant={isMonitoring ? "default" : "secondary"}>
+          {isMonitoring ? "Live Monitoring" : "Historical Data"}
         </Badge>
       </div>
       <div>

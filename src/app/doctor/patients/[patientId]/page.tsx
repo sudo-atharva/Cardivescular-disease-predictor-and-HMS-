@@ -2,8 +2,17 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Heart, Droplets, Thermometer, Activity, PlusCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { MonitoringControl } from "@/components/monitoring-control";
+import { Heart, Activity, User as UserIcon, PlusCircle } from "lucide-react";
+import { useMonitoringState } from "@/lib/monitoring-state";
+
+interface VitalCard {
+  title: string;
+  value: string;
+  icon: any;
+  color: string;
+}
 import PatientVitalsChart from '@/components/patient-charts';
 import DiagnosisReportGenerator from '@/components/diagnosis-report-generator';
 import { useMemo, useState, useEffect } from 'react';
@@ -14,12 +23,48 @@ import type { Report, User } from '@/lib/models';
 import { Skeleton } from '@/components/ui/skeleton';
 
 
-const vitalsCards = [
-    { title: "Heart Rate", value: "98 bpm", icon: Heart, color: "text-red-500" },
-    { title: "Blood Pressure", value: "130/85 mmHg", icon: Droplets, color: "text-blue-500" },
-    { title: "Temperature", value: "99.1°F", icon: Thermometer, color: "text-orange-500" },
-    { title: "SpO2", value: "97%", icon: Activity, color: "text-green-500" },
-];
+function VitalsCards({ patientId }: { patientId: string }) {
+  const { getPatientReadings } = useMonitoringState();
+  const readings = getPatientReadings(patientId);
+  const latestReading = readings[readings.length - 1];
+
+  const cards: VitalCard[] = [
+    { 
+      title: "Heart Rate", 
+      value: latestReading ? `${Math.round(latestReading.heartRate)} bpm` : "-- bpm", 
+      icon: Heart, 
+      color: "text-red-500" 
+    },
+    { 
+      title: "SpO2", 
+      value: latestReading ? `${Math.round(latestReading.spo2)}%` : "--%", 
+      icon: Activity, 
+      color: "text-green-500" 
+    },
+    { 
+      title: "ECG", 
+      value: latestReading ? `${latestReading.ecg.toFixed(2)} mV` : "-- mV", 
+      icon: Activity, 
+      color: "text-blue-500" 
+    },
+  ];
+
+  return (
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {cards.map((vital: VitalCard) => (
+        <Card key={vital.title}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">{vital.title}</CardTitle>
+            <vital.icon className={`h-4 w-4 text-muted-foreground ${vital.color}`} />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{vital.value}</div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
 
 export default function PatientDetailPage() {
   const params = useParams();
@@ -123,19 +168,7 @@ export default function PatientDetailPage() {
         </CardHeader>
       </Card>
       
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {vitalsCards.map(vital => (
-          <Card key={vital.title}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{vital.title}</CardTitle>
-              <vital.icon className={`h-4 w-4 text-muted-foreground ${vital.color}`} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{vital.value}</div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <VitalsCards patientId={patientId} />
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
@@ -143,8 +176,9 @@ export default function PatientDetailPage() {
                 <CardTitle>Live Vitals</CardTitle>
                 <CardDescription>Real-time ECG for {patient.name}.</CardDescription>
             </CardHeader>
-            <CardContent>
-                <PatientVitalsChart />
+            <CardContent className="space-y-4">
+                <MonitoringControl patientId={patientId} patientName={patient.name} />
+                <PatientVitalsChart patientId={patientId} />
             </CardContent>
         </Card>
         {latestReport ? (

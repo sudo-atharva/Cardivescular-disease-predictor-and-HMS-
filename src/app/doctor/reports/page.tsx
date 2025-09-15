@@ -97,7 +97,7 @@ export default function ReportsPage() {
 
                       <h2>Live Vitals Waveform</h2>
                       <div className="not-prose">
-                        <PatientVitalsChart />
+                        <PatientVitalsChart patientId={report.patientId} />
                       </div>
                       <hr />
 

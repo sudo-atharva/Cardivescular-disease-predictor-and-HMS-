@@ -55,7 +55,7 @@ export class HttpVitalsClient {
   private lastReadings: VitalReading[] = [];
   private isConnected: boolean = false;
   private isPolling: boolean = false;
-  private pollRate: number = 200; // Poll every 200ms (5Hz)
+  private pollRate: number = 1000; // Poll every 1000ms (1Hz)
   private lastTimestamp: number = 0;
   private consecutiveErrors: number = 0;
   private maxConsecutiveErrors: number = 5;
@@ -141,7 +141,7 @@ export class HttpVitalsClient {
         headers: {
           'Accept': 'application/json',
         },
-        signal: AbortSignal.timeout(3000), // 3 second timeout
+        signal: AbortSignal.timeout(10000), // 10 second timeout
       });
 
       if (!response.ok) {

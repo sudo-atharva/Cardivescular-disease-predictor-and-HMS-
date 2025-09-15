@@ -16,7 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useSettings } from '@/lib/settings';
-import { vitalsSocket } from '@/lib/websocket';
+import { httpVitalsClient } from '@/lib/http-vitals';
 import { useToast } from '@/components/ui/use-toast';
 import { Save } from 'lucide-react';
 
@@ -49,29 +49,33 @@ export default function DoctorDashboard() {
     fetchPatients();
   }, []);
 
-  // Monitor WebSocket connection status and handle events
+  // Monitor HTTP connection status and handle events
   useEffect(() => {
-    const update = () => setIsConnected(vitalsSocket.isDeviceConnected());
+    const update = () => setIsConnected(httpVitalsClient.isDeviceConnected());
     update();
     const interval = setInterval(update, 1000);
-    vitalsSocket.setHandlers({
+    httpVitalsClient.setHandlers({
       onConnect: () => setIsConnected(true),
       onDisconnect: () => setIsConnected(false),
+      onError: (error) => {
+        console.error('HTTP vitals error:', error);
+      }
     });
     return () => {
       clearInterval(interval);
-      vitalsSocket.setHandlers({});
+      httpVitalsClient.setHandlers({});
     };
   }, []);
 
   const handleSaveEsp32Ip = () => {
-    const valid = /^(ws[s]?:\/\/)?([a-zA-Z0-9][-a-zA-Z0-9_.]*)(:[0-9]+)?(\/[\w-./]*)?$/.test(esp32Ip);
+    const valid = /^([a-zA-Z0-9][-a-zA-Z0-9_.]*)(:[0-9]+)?$/.test(esp32Ip.replace(/^https?:\/\//, ''));
     if (!valid) {
-      toast({ title: 'Invalid IP Address', description: 'Enter a valid host:port or ws(s):// URL (optionally with path).', variant: 'destructive' });
+      toast({ title: 'Invalid IP Address', description: 'Enter a valid IP address (e.g., 192.168.1.50 or 192.168.1.50:80)', variant: 'destructive' });
       return;
     }
     setEsp32IpAddress(esp32Ip);
-    vitalsSocket.reconnect();
+    httpVitalsClient.setBaseUrl(esp32Ip);
+    httpVitalsClient.reconnect();
     toast({ title: 'Settings Saved', description: 'ESP32 connection settings updated.' });
   };
 
@@ -129,17 +133,17 @@ export default function DoctorDashboard() {
       <Card>
         <CardHeader>
           <CardTitle>Device Configuration</CardTitle>
-          <CardDescription>Configure the ESP32 WebSocket endpoint for live ECG/PPG streaming.</CardDescription>
+          <CardDescription>Configure the ESP32 HTTP endpoint for live ECG, SpO2, and heart rate streaming.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            <Label htmlFor="esp32-ip">ESP32 IP/URL</Label>
+            <Label htmlFor="esp32-ip">ESP32 IP Address</Label>
             <div className="flex gap-2">
               <Input
                 id="esp32-ip"
                 value={esp32Ip}
                 onChange={(e) => setEsp32Ip(e.target.value)}
-                placeholder="192.168.1.100:81 or ws://192.168.1.100:81/ws"
+                placeholder="192.168.1.50 or 192.168.1.50:80"
               />
               <Button type="button" onClick={handleSaveEsp32Ip}>
                 <Save className="mr-2 h-4 w-4" />
@@ -181,7 +185,7 @@ export default function DoctorDashboard() {
                         <CardDescription>Device ID: {patient.deviceId}</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <PatientVitalsChart />
+                        <PatientVitalsChart patientId={patient.userId} />
                     </CardContent>
                 </Card>
             ))}

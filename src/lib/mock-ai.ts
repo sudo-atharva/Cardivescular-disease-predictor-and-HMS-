@@ -23,8 +23,8 @@ export async function generateMockDiagnosisReport(input: GenerateDiagnosisReport
 
 export function isMockMode(): boolean {
   // Check if we're in mock mode (no external AI services available)
-  const hasGoogleAI = !!process.env.GOOGLE_AI_API_KEY;
-  const hasOllama = process.env.AI_PROVIDER === 'ollama' && process.env.OLLAMA_HOST;
+  const hasGoogleAI = !!(process.env.GOOGLE_AI_API_KEY || process.env.GOOGLE_GENAI_API_KEY);
+  const hasOllama = process.env.AI_PROVIDER === 'ollama' && !!process.env.OLLAMA_HOST;
   
   return !hasGoogleAI && !hasOllama;
 }

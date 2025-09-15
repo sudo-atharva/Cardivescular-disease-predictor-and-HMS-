@@ -60,7 +60,7 @@ export default function PatientDashboard() {
             <CardDescription>Live ECG and PPG readings. These are read-only.</CardDescription>
           </CardHeader>
           <CardContent>
-            <PatientVitalsChart />
+            <PatientVitalsChart patientId={patientId} />
           </CardContent>
         </Card>
       </div>

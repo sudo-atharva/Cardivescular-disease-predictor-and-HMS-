@@ -45,7 +45,7 @@ export async function createDiagnosisReport(
   formData: FormData,
 ) {
   // In a real app, you would fetch this data from your database based on a patient ID.
-  // For this prototype, we'll use mock data.
+  // Try to get latest vitals from ESP32 if configured; otherwise fall back to mock data so it works offline.
   const mockVitalsData = [
     {"ts":"2024-08-19T14:22:35","id":"CAR01","ppg":1023,"ecg":0.85,"hr":72,"spo2":98,"ptt":180},
     {"ts":"2024-08-19T14:22:36","id":"CAR01","ppg":1021,"ecg":0.88,"hr":73,"spo2":98,"ptt":179},
@@ -54,12 +54,37 @@ export async function createDiagnosisReport(
     {"ts":"2024-08-19T14:22:39","id":"CAR01","ppg":1030,"ecg":0.86,"hr":72,"spo2":98,"ptt":180}
   ];
 
-  const patientHistory = await getPatientHistoryAsString(patientId);
+  async function getLatestVitalsFromESP32(): Promise<any[] | null> {
+    try {
+      const baseUrl = process.env.ESP32_BASE_URL || (process.env.ESP32_IP ? `http://${process.env.ESP32_IP}` : '');
+      if (!baseUrl) return null;
+      const url = `${baseUrl.replace(/\/$/, '')}/vitals?samples=20`;
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        // AbortSignal.timeout is available in Node 18+, cast to any for TS compatibility
+        signal: (AbortSignal as any).timeout ? (AbortSignal as any).timeout(5000) : undefined,
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      const arr = Array.isArray(data) ? data : [data];
+      const normalized = arr.map((d: any) => ({
+        ts: new Date(d.timestamp ?? d.ts ?? Date.now()).toISOString(),
+        id: 'ESP32',
+        ppg: d.ppg ?? 0,
+        ecg: d.ecg ?? 0,
+        hr: d.heartRate ?? d.hr ?? 0,
+        spo2: d.spo2 ?? 0,
+        ptt: d.ptt ?? 0,
+      }));
+      return normalized;
+    } catch (error) {
+      console.error('Failed to fetch latest vitals from ESP32:', error);
+      return null;
+    }
+  }
 
-  const input: GenerateDiagnosisReportInput = {
-    vitalsData: JSON.stringify(mockVitalsData),
-    patientHistory: patientHistory,
-  };
+  const patientHistory = await getPatientHistoryAsString(patientId);
 
   if (patientHistory === "No patient history found.") {
     return {
@@ -67,6 +92,16 @@ export async function createDiagnosisReport(
       report: '',
     };
   }
+
+  let vitalsDataForAI = await getLatestVitalsFromESP32();
+  if (!vitalsDataForAI || vitalsDataForAI.length === 0) {
+    vitalsDataForAI = mockVitalsData;
+  }
+
+  const input: GenerateDiagnosisReportInput = {
+    vitalsData: JSON.stringify(vitalsDataForAI),
+    patientHistory: patientHistory,
+  };
 
   try {
     const output = await generateDiagnosisReport(input);
