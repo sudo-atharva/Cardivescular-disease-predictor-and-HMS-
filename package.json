@@ -3,10 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/ensure-author.js --ensure --verify",
     "dev": "next dev --turbopack -p 9002",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
+    "prebuild": "node scripts/ensure-author.js --ensure --verify",
     "build": "next build",
+    "prestart": "node scripts/ensure-author.js --verify",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
@@ -69,5 +72,8 @@
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
-  }
+  },
+  "author": "Atharva-Tikle",
+  "license": "MIT",
+  "privateNotice": "Original author Atharva Tikle. No permission is granted to patent this code as yourself."
 }
