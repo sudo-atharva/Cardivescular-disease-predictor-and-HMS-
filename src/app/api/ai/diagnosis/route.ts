@@ -1,3 +1,9 @@
+/*
+  Author: Atharva-Tikle
+  Original Author: Atharva Tikle
+  License: MIT
+  Notice: No permission is granted to patent this code as yourself.
+*/
 import { NextRequest, NextResponse } from 'next/server';
 import { generateDiagnosisReport } from '@/ai/flows/generate-diagnosis-report';
 import { isMockMode } from '@/lib/mock-ai';

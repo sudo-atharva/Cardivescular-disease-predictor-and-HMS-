@@ -1,3 +1,9 @@
+/*
+  Author: Atharva-Tikle
+  Original Author: Atharva Tikle
+  License: MIT
+  Notice: No permission is granted to patent this code as yourself.
+*/
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
 import { Report } from '@/lib/models';

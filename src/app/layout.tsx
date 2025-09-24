@@ -1,3 +1,9 @@
+/*
+  Author: Atharva-Tikle
+  Original Author: Atharva Tikle
+  License: MIT
+  Notice: No permission is granted to patent this code as yourself.
+*/
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";

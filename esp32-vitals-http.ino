@@ -1,3 +1,9 @@
+/*
+  Author: Atharva-Tikle
+  Original Author: Atharva Tikle
+  License: MIT
+  Notice: No permission is granted to patent this code as yourself.
+*/
 #include <WiFi.h>
 #include <WebServer.h>
 #include <ArduinoJson.h>

@@ -1,3 +1,9 @@
+<!--
+  Author: Atharva-Tikle
+  Original Author: Atharva Tikle
+  License: MIT
+  Notice: No permission is granted to patent this code as yourself.
+-->
 # HealthLink Vital Signs - MERN Stack Healthcare Application
 
 A comprehensive healthcare management system built with MongoDB, Express.js, React/Next.js, and Node.js. This application provides secure access for medical professionals and patients to manage health data, view ML-based diagnoses, and monitor vital signs.

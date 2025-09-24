@@ -1,3 +1,9 @@
+<!--
+  Author: Atharva-Tikle
+  Original Author: Atharva Tikle
+  License: MIT
+  Notice: No permission is granted to patent this code as yourself.
+-->
 # ESP32 HTTP Vitals Monitor Setup Guide
 
 This guide will help you set up your ESP32 to stream ECG and PPG data to your web application using HTTP requests instead of WebSocket connections. HTTP is more reliable and easier to troubleshoot than WebSocket connections.

@@ -1,3 +1,9 @@
+<!--
+  Author: Atharva-Tikle
+  Original Author: Atharva Tikle
+  License: MIT
+  Notice: No permission is granted to patent this code as yourself.
+-->
 # ESP32 HTTP Vitals Monitor - Implementation Summary
 
 This project now supports **HTTP-based communication** between the ESP32 and the web application, providing a more reliable alternative to WebSocket connections.

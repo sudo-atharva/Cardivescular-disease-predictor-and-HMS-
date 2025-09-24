@@ -1,3 +1,9 @@
+/*
+  Author: Atharva-Tikle
+  Original Author: Atharva Tikle
+  License: MIT
+  Notice: No permission is granted to patent this code as yourself.
+*/
 import { GenerateDiagnosisReportInput, GenerateDiagnosisReportOutput } from '@/ai/flows/generate-diagnosis-report';
 
 // Mock AI responses for demonstration purposes

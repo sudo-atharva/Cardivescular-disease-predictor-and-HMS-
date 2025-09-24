@@ -1,3 +1,9 @@
+/*
+  Author: Atharva-Tikle
+  Original Author: Atharva Tikle
+  License: MIT
+  Notice: No permission is granted to patent this code as yourself.
+*/
 import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
 import { ollama } from 'genkitx-ollama';

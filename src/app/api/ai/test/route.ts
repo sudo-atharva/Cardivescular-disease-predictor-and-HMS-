@@ -1,3 +1,9 @@
+/*
+  Author: Atharva-Tikle
+  Original Author: Atharva Tikle
+  License: MIT
+  Notice: No permission is granted to patent this code as yourself.
+*/
 import { NextResponse } from 'next/server';
 import { ai, getModel } from '@/ai/genkit';
 import { getAIConfig } from '@/lib/ai-config';

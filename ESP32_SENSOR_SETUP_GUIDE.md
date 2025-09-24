@@ -1,3 +1,9 @@
+<!--
+  Author: Atharva-Tikle
+  Original Author: Atharva Tikle
+  License: MIT
+  Notice: No permission is granted to patent this code as yourself.
+-->
 # ESP32 Vitals Monitor - Sensor Setup Guide
 
 This guide covers the setup for your specific sensor configuration: AD8232 for ECG, MAX30105 for SpO2 and heart rate, and SSD1306 OLED display.
