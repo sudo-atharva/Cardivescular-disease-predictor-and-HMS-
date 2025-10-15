@@ -152,7 +152,7 @@ export default function PatientDetailPage() {
             <div className="flex-1">
               <CardTitle className="text-3xl">Patient: {patient.name}</CardTitle>
               <CardDescription>
-                ID: {patient.userId} | Age: {latestReport?.patientInfo.age} | Gender: {latestReport?.patientInfo.gender} | Device ID: {patient.deviceId || 'N/A'}
+                ID: {patient.userId} | Age: {latestReport?.patientInfo?.age || 'N/A'} | Gender: {latestReport?.patientInfo?.gender || 'N/A'} | Device ID: {patient.deviceId || 'N/A'}
               </CardDescription>
             </div>
              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -167,14 +167,14 @@ export default function PatientDetailPage() {
                   <DialogTitle>Create New Report for {patient.name}</DialogTitle>
                 </DialogHeader>
                 <div className="flex-1 overflow-y-auto -mr-6 pr-6">
-                    <CreateReportForm patient={patient} onFormSubmit={handleDialogClose} latestReport={latestReport} />
+                    <CreateReportForm patient={patient} onFormSubmit={handleDialogClose} onCancel={() => setIsDialogOpen(false)} latestReport={latestReport} />
                 </div>
               </DialogContent>
             </Dialog>
         </CardHeader>
       </Card>
       
-      <VitalsCards patientId={patientId} />
+      {/* Vitals summary cards removed per request */}
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
@@ -191,13 +191,13 @@ export default function PatientDetailPage() {
              <Card>
                 <CardHeader>
                     <CardTitle>Latest Patient History</CardTitle>
-                    <CardDescription>From report dated {latestReport.patientInfo.visitDate}. View all reports on the main Reports page.</CardDescription>
+                    <CardDescription>From report dated {latestReport?.patientInfo?.visitDate || 'N/A'}. View all reports on the main Reports page.</CardDescription>
                 </CardHeader>
                 <CardContent className="prose prose-sm max-w-none text-sm">
-                    <p><strong>Presenting Complaint:</strong> {latestReport.medicalHistory.complaint}</p>
-                    <p><strong>History of Present Illness:</strong> {latestReport.medicalHistory.hpi}</p>
-                    <p><strong>Past Medical History:</strong> {latestReport.medicalHistory.pastMedicalHistory}</p>
-                    <p><strong>Diagnosis:</strong> {latestReport.investigations.diagnosis}</p>
+                    <p><strong>Presenting Complaint:</strong> {latestReport?.medicalHistory?.complaint || 'N/A'}</p>
+                    <p><strong>History of Present Illness:</strong> {latestReport?.medicalHistory?.hpi || 'N/A'}</p>
+                    <p><strong>Past Medical History:</strong> {latestReport?.medicalHistory?.pastMedicalHistory || 'N/A'}</p>
+                    <p><strong>Diagnosis:</strong> {latestReport?.investigations?.diagnosis || 'N/A'}</p>
                 </CardContent>
             </Card>
         ) : (

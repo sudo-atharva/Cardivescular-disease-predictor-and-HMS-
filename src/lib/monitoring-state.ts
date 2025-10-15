@@ -17,6 +17,9 @@ interface MonitoringState {
   addReading: (patientId: string, reading: VitalReading) => void;
   getPatientReadings: (patientId: string) => VitalReading[];
   clearReadings: (patientId: string) => void;
+  patientDeviceUrlById: Record<string, string | undefined>;
+  setPatientDeviceUrl: (patientId: string, baseUrl: string) => void;
+  getPatientDeviceUrl: (patientId: string) => string | undefined;
 }
 
 export const useMonitoringState = create<MonitoringState>()(
@@ -24,6 +27,7 @@ export const useMonitoringState = create<MonitoringState>()(
     (set, get) => ({
       currentPatientId: null,
       patientReadings: {},
+      patientDeviceUrlById: {},
       
       setCurrentPatientId: (id) => set({ currentPatientId: id }),
       
@@ -48,7 +52,16 @@ export const useMonitoringState = create<MonitoringState>()(
           ...state.patientReadings,
           [patientId]: []
         }
-      }))
+      })),
+
+      setPatientDeviceUrl: (patientId, baseUrl) => set((state) => ({
+        patientDeviceUrlById: {
+          ...state.patientDeviceUrlById,
+          [patientId]: baseUrl,
+        }
+      })),
+
+      getPatientDeviceUrl: (patientId) => get().patientDeviceUrlById[patientId],
     }),
     {
       name: 'patient-monitoring'

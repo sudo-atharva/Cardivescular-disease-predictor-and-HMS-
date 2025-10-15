@@ -22,6 +22,7 @@ export interface User {
   lastCheck?: string;
   risk?: 'Low' | 'Medium' | 'High' | 'N/A';
   deviceId?: string | null;
+  deviceUrl?: string | null;
   isLive?: boolean;
 }
 

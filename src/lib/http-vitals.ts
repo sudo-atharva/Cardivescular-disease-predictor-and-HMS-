@@ -1,186 +1,61 @@
-/*
-  Author: Atharva-Tikle
-  Original Author: Atharva Tikle
-  License: MIT
-  Notice: No permission is granted to patent this code as yourself.
-*/
-export interface VitalReading {
-  timestamp: number;
-  ecg: number;
-  spo2: number;
-  heartRate: number;
-}
-
-export interface DeviceStatus {
-  status: string;
-  connected: boolean;
-  uptime: number;
-  totalRequests: number;
-  sampleRate: number;
-  bufferSize: number;
-  bufferFull: boolean;
-  wifiRSSI: number;
-  freeHeap: number;
-  timestamp: number;
-}
-
-export interface DeviceInfo {
-  device: string;
-  version: string;
-  protocol: string;
-  ip: string;
-  mac: string;
-  chipModel: string;
-  chipRevision: number;
-  flashSize: number;
-  timestamp: number;
-}
-
-interface VitalsResponse {
-  timestamp: number;
-  ecg: number;
-  spo2: number;
-  heartRate: number;
-  status: string;
-  uptime: number;
-  requests: number;
-}
-
-interface HttpVitalsHandler {
-  onData?: (readings: VitalReading[]) => void;
-  onConnect?: () => void;
-  onDisconnect?: () => void;
-  onError?: (error: Error) => void;
-}
-
+// src/lib/http-vitals.ts
 export class HttpVitalsClient {
-  private static instance: HttpVitalsClient;
-  private baseUrl: string = 'http://192.168.1.50'; // Update this with your ESP32's actual IP
+  private baseUrl: string = 'http://192.168.31.111';
   private pollInterval: NodeJS.Timeout | null = null;
-  private handlers: HttpVitalsHandler = {};
-  private lastReadings: VitalReading[] = [];
-  private isConnected: boolean = false;
   private isPolling: boolean = false;
-  private pollRate: number = 1000; // Poll every 1000ms (1Hz)
-  private lastTimestamp: number = 0;
+  private pollRate: number = 1000;
+  private lastReadings: VitalReading[] = [];
   private consecutiveErrors: number = 0;
   private maxConsecutiveErrors: number = 5;
+  private isConnected: boolean = false;
+  private handlers: {
+    onData?: (readings: VitalReading[]) => void;
+    onConnect?: () => void;
+    onDisconnect?: () => void;
+    onError?: (error: Error) => void;
+  } = {};
 
-  private constructor() {
-    this.loadSettings();
-  }
-
-  static getInstance(): HttpVitalsClient {
-    if (!HttpVitalsClient.instance) {
-      HttpVitalsClient.instance = new HttpVitalsClient();
-    }
-    return HttpVitalsClient.instance;
-  }
-
-  private loadSettings() {
-    if (typeof window !== 'undefined') {
-      try {
-        const savedSettings = localStorage.getItem('app-settings');
-        if (savedSettings) {
-          const settings = JSON.parse(savedSettings);
-          if (settings.esp32IpAddress) {
-            // Remove any protocol prefix and add http://
-            let ip = settings.esp32IpAddress.replace(/^(https?:\/\/|ws:\/\/|wss:\/\/)/, '');
-            // Remove any port if it's 81 (WebSocket port) and use 80 for HTTP
-            ip = ip.replace(':81', '');
-            this.baseUrl = `http://${ip}`;
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load settings:', error);
-      }
-    }
-  }
-
-  setBaseUrl(url: string) {
-    // Ensure URL has http:// prefix
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      url = `http://${url}`;
-    }
-    this.baseUrl = url;
-  }
-
-  setPollRate(rateMs: number) {
-    this.pollRate = Math.max(100, rateMs); // Minimum 100ms
-    if (this.isPolling) {
-      this.stopPolling();
-      this.startPolling();
-    }
-  }
-
-  setHandlers(handlers: HttpVitalsHandler) {
-    this.handlers = handlers;
-  }
-
-  async testConnection(): Promise<boolean> {
-    try {
-      const response = await fetch(`${this.baseUrl}/test`, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-        },
-        signal: AbortSignal.timeout(5000), // 5 second timeout
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const testResponse = await response.json();
-      return testResponse.status === 'working';
-    } catch (error) {
-      console.error('Connection test failed:', error);
-      return false;
-    }
-  }
+  // ... (other methods remain the same)
 
   async getVitals(numSamples: number = 10): Promise<VitalReading[]> {
     try {
-      const url = `${this.baseUrl}/vitals`;
+      const base = this.baseUrl.replace(/\/$/, '');
+      const url = `${base}/vitals?samples=${encodeURIComponent(numSamples)}`;
       const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
         },
-        signal: AbortSignal.timeout(10000), // 10 second timeout
+        cache: 'no-store',
       });
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const vitalsResponse: VitalsResponse = await response.json();
-      
-      // Convert single reading to VitalReading format
-      const reading: VitalReading = {
-        timestamp: vitalsResponse.timestamp,
-        ecg: vitalsResponse.ecg,
-        spo2: vitalsResponse.spo2,
-        heartRate: vitalsResponse.heartRate
-      };
+      const data = await response.json();
 
-      // Only add if it's a new reading (different timestamp)
-      if (reading.timestamp > this.lastTimestamp) {
-        this.lastTimestamp = reading.timestamp;
-        
-        // Add to buffer
-        this.lastReadings.push(reading);
-        
-        // Keep only last 1000 readings
-        if (this.lastReadings.length > 1000) {
-          this.lastReadings = this.lastReadings.slice(-1000);
-        }
+      const normalize = (d: any): VitalReading => ({
+        timestamp: Number(d.timestamp ?? d.ts ?? Date.now()),
+        ecg: Number(d.ecg ?? 0),
+        spo2: Number(d.spo2 ?? 0),
+        heartRate: Number(d.heartRate ?? d.hr ?? 0),
+      });
 
-        return [reading]; // Return as array for compatibility
+      const readingsArr: VitalReading[] = Array.isArray(data)
+        ? data.map(normalize)
+        : Array.isArray((data as any).data)
+          ? (data as any).data.map(normalize)
+          : [normalize(data)];
+
+      this.lastReadings.push(...readingsArr);
+      if (this.lastReadings.length > 1000) {
+        this.lastReadings = this.lastReadings.slice(-1000);
       }
 
-      return []; // No new data
+      return readingsArr;
     } catch (error) {
+      console.error('Error in getVitals:', error);
       throw new Error(`Failed to fetch vitals: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -192,7 +67,6 @@ export class HttpVitalsClient {
         headers: {
           'Accept': 'application/json',
         },
-        signal: AbortSignal.timeout(3000),
       });
 
       if (!response.ok) {
@@ -201,45 +75,22 @@ export class HttpVitalsClient {
 
       return await response.json();
     } catch (error) {
-      throw new Error(`Failed to fetch status: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }
-
-  async getDeviceInfo(): Promise<DeviceInfo> {
-    try {
-      const response = await fetch(`${this.baseUrl}/info`, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-        },
-        signal: AbortSignal.timeout(3000),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      throw new Error(`Failed to fetch device info: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Failed to fetch device status:', error);
+      throw new Error(`Failed to fetch device status: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
   startPolling() {
-    if (this.isPolling) {
-      return;
-    }
+    if (this.isPolling) return;
 
     this.isPolling = true;
     console.log(`Starting HTTP polling at ${this.pollRate}ms intervals`);
 
     const poll = async () => {
-      if (!this.isPolling) {
-        return;
-      }
+      if (!this.isPolling) return;
 
       try {
-        const newReadings = await this.getVitals(20); // Get up to 20 samples per request
+        const newReadings = await this.getVitals(20);
         
         if (newReadings.length > 0) {
           this.consecutiveErrors = 0;
@@ -247,44 +98,27 @@ export class HttpVitalsClient {
           if (!this.isConnected) {
             this.isConnected = true;
             console.log('Connected to ESP32 via HTTP');
-            if (this.handlers.onConnect) {
-              this.handlers.onConnect();
-            }
+            this.handlers.onConnect?.();
           }
 
-          if (this.handlers.onData) {
-            this.handlers.onData(newReadings);
-          }
+          this.handlers.onData?.(newReadings);
         }
 
-        // Schedule next poll
         this.pollInterval = setTimeout(poll, this.pollRate);
-
       } catch (error) {
         this.consecutiveErrors++;
         console.error(`HTTP polling error (${this.consecutiveErrors}/${this.maxConsecutiveErrors}):`, error);
 
         if (this.consecutiveErrors >= this.maxConsecutiveErrors) {
-          if (this.isConnected) {
-            this.isConnected = false;
-            console.log('Disconnected from ESP32 (too many errors)');
-            if (this.handlers.onDisconnect) {
-              this.handlers.onDisconnect();
-            }
-          }
+          this.isConnected = false;
+          this.handlers.onDisconnect?.();
+          this.stopPolling();
+        } else {
+          this.pollInterval = setTimeout(poll, this.pollRate);
         }
-
-        if (this.handlers.onError) {
-          this.handlers.onError(error instanceof Error ? error : new Error('Unknown error'));
-        }
-
-        // Continue polling even on errors, but with exponential backoff
-        const backoffDelay = Math.min(this.pollRate * Math.pow(2, this.consecutiveErrors - 1), 10000);
-        this.pollInterval = setTimeout(poll, backoffDelay);
       }
     };
 
-    // Start polling immediately
     poll();
   }
 
@@ -294,51 +128,70 @@ export class HttpVitalsClient {
       clearTimeout(this.pollInterval);
       this.pollInterval = null;
     }
-    console.log('Stopped HTTP polling');
   }
 
-  getLastReadings(): VitalReading[] {
-    return this.lastReadings;
-  }
-
-  isDeviceConnected(): boolean {
-    return this.isConnected;
-  }
-
-  getConnectionInfo() {
-    return {
-      baseUrl: this.baseUrl,
-      isConnected: this.isConnected,
-      isPolling: this.isPolling,
-      pollRate: this.pollRate,
-      consecutiveErrors: this.consecutiveErrors,
-      lastReadingsCount: this.lastReadings.length,
-    };
-  }
-
-  // Compatibility methods for existing WebSocket interface
+  // Convenience aliases for UI components expecting connect/disconnect
   connect() {
     this.startPolling();
   }
 
   disconnect() {
     this.stopPolling();
-    this.isConnected = false;
-    if (this.handlers.onDisconnect) {
-      this.handlers.onDisconnect();
+  }
+
+  setHandlers(handlers: {
+    onData?: (readings: VitalReading[]) => void;
+    onConnect?: () => void;
+    onDisconnect?: () => void;
+    onError?: (error: Error) => void;
+  }) {
+    this.handlers = { ...this.handlers, ...handlers };
+  }
+
+  setBaseUrl(url: string) {
+    if (!/^https?:\/\//i.test(url)) {
+      url = `http://${url}`;
+    }
+    // Keep host and optional port, strip path
+    try {
+      const u = new URL(url);
+      this.baseUrl = `${u.protocol}//${u.host}`;
+    } catch {
+      // Fallback: best-effort
+      this.baseUrl = url.replace(/\/$/, '');
+    }
+    this.consecutiveErrors = 0;
+    if (this.isPolling) {
+      this.stopPolling();
+      this.startPolling();
     }
   }
 
-  reconnect() {
-    this.stopPolling();
-    this.consecutiveErrors = 0;
-    this.startPolling();
+  isDeviceConnected(): boolean {
+    return this.isConnected;
   }
 
-  close() {
-    this.stopPolling();
+  getLastReadings(): VitalReading[] {
+    return [...this.lastReadings];
   }
+  // Add this method to the HttpVitalsClient class
+reconnect() {
+  this.stopPolling();
+  this.consecutiveErrors = 0;
+  this.startPolling();
 }
 
-// Create singleton instance
-export const httpVitalsClient = HttpVitalsClient.getInstance();
+// Add this method as well for better error handling
+private handleError(error: Error) {
+  console.error('HTTP Vitals Client Error:', error);
+  this.handlers.onError?.(error);
+  
+  if (this.consecutiveErrors >= this.maxConsecutiveErrors && this.isConnected) {
+    this.isConnected = false;
+    this.handlers.onDisconnect?.();
+  }
+}
+}
+
+
+export const httpVitalsClient = new HttpVitalsClient();

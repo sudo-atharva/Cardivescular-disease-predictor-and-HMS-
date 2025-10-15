@@ -9,7 +9,7 @@
 
 import { generateDiagnosisReport, type GenerateDiagnosisReportInput } from '@/ai/flows/generate-diagnosis-report';
 import clientPromise from './mongodb';
-import type { Report } from './models';
+import type { Report, User } from './models';
 
 async function getPatientHistoryAsString(patientId: string): Promise<string> {
     const client = await clientPromise;
@@ -62,7 +62,13 @@ export async function createDiagnosisReport(
 
   async function getLatestVitalsFromESP32(): Promise<any[] | null> {
     try {
-      const baseUrl = process.env.ESP32_BASE_URL || (process.env.ESP32_IP ? `http://${process.env.ESP32_IP}` : '');
+      const client = await clientPromise;
+      const db = client.db();
+      const users = db.collection<User>('users');
+      const patient = await users.findOne({ userId: patientId, role: 'patient' });
+
+      const mappedUrl = patient?.deviceUrl;
+      const baseUrl = mappedUrl || process.env.ESP32_BASE_URL || (process.env.ESP32_IP ? `http://${process.env.ESP32_IP}` : '');
       if (!baseUrl) return null;
       const url = `${baseUrl.replace(/\/$/, '')}/vitals?samples=20`;
       const res = await fetch(url, {
@@ -104,6 +110,40 @@ export async function createDiagnosisReport(
     vitalsDataForAI = mockVitalsData;
   }
 
+  // Lightweight ML-style risk scoring (baseline heuristic)
+  function computeMlRisk(vitals: any[]) {
+    try {
+      const hr = vitals.map(v => Number(v.hr || v.heartRate || 0)).filter(n => Number.isFinite(n));
+      const spo2 = vitals.map(v => Number(v.spo2 || 0)).filter(n => Number.isFinite(n));
+      const ecg = vitals.map(v => Number(v.ecg || 0)).filter(n => Number.isFinite(n));
+      const mean = (arr: number[]) => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+      const std = (arr: number[]) => {
+        if (arr.length === 0) return 0;
+        const m = mean(arr);
+        const v = arr.reduce((a,b)=>a + (b-m)*(b-m), 0)/arr.length;
+        return Math.sqrt(v);
+      };
+
+      const hrMean = mean(hr);
+      const hrStd = std(hr);
+      const spo2Mean = mean(spo2);
+      const ecgStd = std(ecg);
+
+      // Simple logistic-style score combining features
+      const z = 0.04 * (hrMean - 75) + 0.08 * (hrStd) - 0.1 * (spo2Mean - 96) + 0.02 * (ecgStd * 100);
+      const score = 1 / (1 + Math.exp(-z));
+      let label: 'Low' | 'Medium' | 'High';
+      if (score < 0.33) label = 'Low';
+      else if (score < 0.66) label = 'Medium';
+      else label = 'High';
+      return { score: Number(score.toFixed(2)), label };
+    } catch {
+      return { score: 0.0, label: 'Low' as const };
+    }
+  }
+
+  const mlRisk = computeMlRisk(vitalsDataForAI);
+
   const input: GenerateDiagnosisReportInput = {
     vitalsData: JSON.stringify(vitalsDataForAI),
     patientHistory: patientHistory,
@@ -122,13 +162,14 @@ export async function createDiagnosisReport(
     if (latestReport) {
         await reportsCollection.updateOne(
             { _id: latestReport._id },
-            { $set: { mlDiagnosis: output.diagnosisReport } }
+            { $set: { mlDiagnosis: `ML Risk: ${mlRisk.label} (${mlRisk.score}).\n\nAI Report:\n${output.diagnosisReport}` } }
         );
     }
 
     return {
       message: 'success',
       report: output.diagnosisReport,
+      mlRisk,
     };
   } catch (e) {
     console.error(e);

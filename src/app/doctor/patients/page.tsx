@@ -17,7 +17,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -137,12 +136,12 @@ export default function PatientsPage() {
                 Add Patient
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-4xl">
+            <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add New Patient</DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleSubmit}>
-              <ScrollArea className="max-h-[70vh] p-4">
+              <form onSubmit={handleSubmit} className="flex flex-col h-full">
+              <div className="flex-1 overflow-y-auto p-4">
                   <Accordion type="multiple" defaultValue={['item-1']} className="w-full">
                     <AccordionItem value="item-1">
                       <AccordionTrigger>Patient Information</AccordionTrigger>
@@ -270,7 +269,7 @@ export default function PatientsPage() {
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>
-              </ScrollArea>
+              </div>
               <DialogFooter>
                 <DialogClose asChild>
                   <Button variant="outline" type="button">Cancel</Button>

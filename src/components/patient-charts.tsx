@@ -52,14 +52,21 @@ interface PatientVitalsChartProps {
 
 export default function PatientVitalsChart({ patientId }: PatientVitalsChartProps) {
     const [isClient, setIsClient] = React.useState(false);
-    const { currentPatientId, getPatientReadings } = useMonitoringState();
+    const currentPatientId = useMonitoringState(state => state.currentPatientId);
     const isMonitoring = currentPatientId === patientId;
 
-    // Get stored readings for this patient
-    const readings = getPatientReadings(patientId);
-    const ecgData = readings.slice(-100);
-    const spo2Data = readings.slice(-100);
-    const heartRateData = readings.slice(-100);
+    // Subscribe to readings for this patient so component re-renders on updates
+    const readings = useMonitoringState(state => state.patientReadings[patientId] || [])
+      .filter(r => Number.isFinite(r.timestamp) && Number.isFinite(r.ecg) && Number.isFinite(r.spo2) && Number.isFinite(r.heartRate))
+      .sort((a, b) => a.timestamp - b.timestamp);
+
+    // Downsample to avoid jitter
+    const downsample = (arr: typeof readings, step: number) => arr.filter((_, idx) => idx % step === 0);
+    const stable = readings.length > 300 ? downsample(readings, Math.ceil(readings.length / 300)) : readings;
+
+    const ecgData = stable.slice(-300);
+    const spo2Data = stable.slice(-300);
+    const heartRateData = stable.slice(-300);
 
     React.useEffect(() => {
         setIsClient(true);
@@ -131,7 +138,7 @@ export default function PatientVitalsChart({ patientId }: PatientVitalsChartProp
             />
             <Area
               dataKey="ecg"
-              type="natural"
+              type="monotone"
               fill="url(#fillEcg)"
               stroke="var(--color-ecg)"
               strokeWidth={2}
@@ -172,7 +179,7 @@ export default function PatientVitalsChart({ patientId }: PatientVitalsChartProp
             />
             <Area
               dataKey="spo2"
-              type="natural"
+              type="monotone"
               fill="url(#fillSpo2)"
               stroke="var(--color-spo2)"
               strokeWidth={2}
@@ -213,7 +220,7 @@ export default function PatientVitalsChart({ patientId }: PatientVitalsChartProp
             />
             <Area
               dataKey="heartRate"
-              type="natural"
+              type="monotone"
               fill="url(#fillHeartRate)"
               stroke="var(--color-heartRate)"
               strokeWidth={2}

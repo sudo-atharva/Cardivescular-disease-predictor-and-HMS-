@@ -12,6 +12,7 @@ import { useMonitoringState } from '@/lib/monitoring-state';
 import { httpVitalsClient } from '@/lib/http-vitals';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
+import { Input } from '@/components/ui/input';
 
 interface MonitoringControlProps {
   patientId: string;
@@ -19,8 +20,9 @@ interface MonitoringControlProps {
 }
 
 export function MonitoringControl({ patientId, patientName }: MonitoringControlProps) {
-  const { currentPatientId, setCurrentPatientId, addReading } = useMonitoringState();
+  const { currentPatientId, setCurrentPatientId, addReading, getPatientDeviceUrl, setPatientDeviceUrl } = useMonitoringState();
   const [isMonitoring, setIsMonitoring] = useState(false);
+  const [deviceUrl, setDeviceUrl] = useState<string>(getPatientDeviceUrl(patientId) || '');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -56,6 +58,12 @@ export function MonitoringControl({ patientId, patientName }: MonitoringControlP
       httpVitalsClient.disconnect();
     }
     
+    // Configure device URL per patient if provided
+    if (deviceUrl && deviceUrl.trim()) {
+      setPatientDeviceUrl(patientId, deviceUrl.trim());
+      httpVitalsClient.setBaseUrl(deviceUrl.trim());
+    }
+
     // Set this patient as current and start polling
     setCurrentPatientId(patientId);
     setIsMonitoring(true);
@@ -88,6 +96,14 @@ export function MonitoringControl({ patientId, patientName }: MonitoringControlP
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Device Base URL</p>
+          <Input
+            placeholder="http://192.168.1.50"
+            value={deviceUrl}
+            onChange={(e) => setDeviceUrl(e.target.value)}
+          />
+        </div>
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-sm font-medium">Status</p>

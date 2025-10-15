@@ -78,52 +78,55 @@ export default function SettingsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate IP/URL format: allow host:port, http://host:port, etc.
     const isValidIp = /^(https?:\/\/)?([a-zA-Z0-9][-a-zA-Z0-9_.]*)(:[0-9]+)?$/.test(esp32Ip);
     
     if (!isValidIp) {
       toast({
         title: "Invalid IP Address",
-        description: "Please enter a valid IP address or hostname (e.g., 192.168.1.100 or localhost)",
+        description: "Please enter a valid IP address or hostname (e.g., 192.168.31.111 or 192.168.1.100)",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      // Update the settings
+      // Update the settings first
       setEsp32IpAddress(esp32Ip);
       
-      // Update the HTTP client base URL
-      let baseUrl = esp32Ip;
-      if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
-        baseUrl = `http://${baseUrl}`;
-      }
-      httpVitalsClient.setBaseUrl(baseUrl);
+      // Clean up the IP (remove protocol if present)
+      let cleanIp = esp32Ip;
+      if (cleanIp.startsWith('http://')) cleanIp = cleanIp.substring(7);
+      if (cleanIp.startsWith('https://')) cleanIp = cleanIp.substring(8);
       
-      // Test the connection
-      const connectionTest = await httpVitalsClient.testConnection();
+      // Set the base URL (without protocol)
+      httpVitalsClient.setBaseUrl(cleanIp);
       
-      if (connectionTest) {
-        // Restart polling with new settings
-        httpVitalsClient.reconnect();
-        
-        toast({
-          title: "Settings Saved",
-          description: "ESP32 connection settings updated and connection successful.",
-        });
-      } else {
-        toast({
-          title: "Settings Saved",
-          description: "Settings saved but could not connect to ESP32. Please check if the device is online.",
-          variant: "default",
-        });
+      // Test the connection with a direct fetch to bypass any client-side caching
+      const testUrl = `http://${cleanIp}/vitals`;
+      const response = await fetch(testUrl, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        mode: 'cors',
+        cache: 'no-cache'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-    } catch (error) {
-      console.error('Error saving settings:', error);
+      
+      const data = await response.json();
+      console.log('Test connection successful:', data);
+      
       toast({
-        title: "Error",
-        description: "Failed to save settings. Please check the console for details.",
+        title: "Connection Successful",
+        description: `Successfully connected to ESP32 at ${cleanIp}`,
+      });
+      
+    } catch (error) {
+      console.error('Connection test failed:', error);
+      toast({
+        title: "Connection Failed",
+        description: `Could not connect to ESP32 at ${esp32Ip}. ${error instanceof Error ? error.message : 'Please check the IP and try again.'}`,
         variant: "destructive",
       });
     }
